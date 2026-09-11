@@ -1,3 +1,89 @@
+/* =========================================
+   SPLASH SCREEN
+========================================= */
+#splash-screen {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: #0f172a;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+    transition: opacity 0.5s ease, visibility 0.5s ease;
+}
+
+#splash-screen.hidden {
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.splash-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: splashFadeIn 0.6s ease forwards;
+}
+
+@keyframes splashFadeIn {
+    from { opacity: 0; transform: scale(0.85) translateY(10px); }
+    to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.splash-logo {
+    width: 100px;
+    height: 100px;
+    border-radius: 22px;
+    box-shadow: 0 0 40px rgba(16, 185, 129, 0.35);
+}
+
+.splash-title {
+    font-family: 'Outfit', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    color: #f8fafc;
+    letter-spacing: 1px;
+    margin: 0;
+}
+
+.splash-sub {
+    font-family: 'Outfit', sans-serif;
+    font-size: 15px;
+    color: #64748b;
+    margin: 0;
+}
+
+/* Loading bar at bottom */
+.splash-bar {
+    position: absolute;
+    bottom: 48px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 120px;
+    height: 4px;
+    background: rgba(255,255,255,0.08);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.splash-bar::after {
+    content: '';
+    display: block;
+    height: 100%;
+    width: 0%;
+    background: #10b981;
+    border-radius: 99px;
+    animation: splashBarFill 1.4s ease forwards;
+}
+
+@keyframes splashBarFill {
+    from { width: 0%; }
+    to   { width: 100%; }
+}
+
 :root {
     /* Color Palette - Premium Dark Mode */
     --bg-base: #0f172a; /* Slate 900 */

@@ -34,6 +34,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialization
     async function init() {
+        const splashScreen = document.getElementById('splash-screen');
+        const splashStart = Date.now();
+        const MIN_SPLASH_TIME = 900;
+
+        const hideSplash = () => {
+            if (!splashScreen) return;
+            const elapsed = Date.now() - splashStart;
+            const remaining = Math.max(0, MIN_SPLASH_TIME - elapsed);
+            setTimeout(() => splashScreen.classList.add('hidden'), remaining);
+        };
+
         // Tenta buscar o índice de arquivos do servidor
         try {
             const response = await fetch('treinos/index.json');
@@ -71,6 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if(filename) loadFromServer(filename);
             });
         }
+
+        hideSplash();
     }
 
     async function loadFromServer(filename) {
