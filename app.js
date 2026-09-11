@@ -61,8 +61,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             
-            // Auto carrega o primeiro da lista
-            if(treinos.length > 0) {
+            // Se houver apenas um treino, esconde a seleção e carrega automático
+            const welcomeSection = document.getElementById('welcome-section');
+            if(treinos.length === 1) {
+                if(welcomeSection) welcomeSection.style.display = 'none';
+                loadFromServer('treinos/' + treinos[0].file);
+            } else if(treinos.length > 0) {
                 loadFromServer('treinos/' + treinos[0].file);
             }
         } catch (error) {
