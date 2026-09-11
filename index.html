@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Academia Pro | Seu Treino</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Phosphor Icons -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        
+        <!-- HEADER -->
+        <header class="app-header">
+            <div class="header-content">
+                <div class="logo">
+                    <i class="ph-fill ph-barbell"></i>
+                    <h1>Academia Pro</h1>
+                </div>
+                <button id="btn-back" class="btn-icon hidden" title="Voltar para seleção">
+                    <i class="ph ph-arrow-left"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- VIEW: SELEÇÃO DE TREINO -->
+            <section id="view-selection" class="view view-active">
+                <div class="welcome-section">
+                    <h2>Qual é o treino de hoje?</h2>
+                    <p>Selecione seu arquivo JSON de treino na lista abaixo.</p>
+                    <div style="margin-top: 16px; display: flex; flex-wrap: wrap; gap: 8px;">
+                        <select id="filename-select" style="flex: 1 1 200px; padding: 12px; border-radius: 8px; border: 1px solid var(--glass-border); background: var(--bg-surface); color: white; font-family: inherit; font-size: 16px;">
+                            <option value="">Carregando treinos...</option>
+                        </select>
+                        <button id="btn-load-server" class="btn-primary" style="flex: 1 1 100px; padding: 12px 24px;">Carregar</button>
+                    </div>
+                    <p id="error-message" style="color: #ef4444; margin-top: 8px; font-size: 14px; display: none;"></p>
+                </div>
+                <div id="workout-list" class="workout-list">
+                    <!-- Cards de treino injetados via JS -->
+                </div>
+
+                <div class="methodology-card">
+                    <h3><i class="ph-fill ph-lightbulb"></i> Metodologia</h3>
+                    <div id="methodology-content">
+                        <!-- Conteúdo injetado via JS -->
+                    </div>
+                </div>
+            </section>
+
+            <!-- VIEW: EXECUÇÃO DO TREINO -->
+            <section id="view-workout" class="view hidden">
+                <div class="workout-header">
+                    <h2 id="workout-title">Treino A</h2>
+                    <p id="workout-focus" class="workout-focus">Peito + Ombros + Tríceps + Abdômen</p>
+                    
+                    <div class="timer-section">
+                        <div class="time-display">
+                            <i class="ph ph-clock"></i>
+                            <span id="timer">00:00:00</span>
+                        </div>
+                        <button id="btn-timer" class="btn-primary">
+                            <i class="ph-fill ph-play-circle"></i> Iniciar Treino
+                        </button>
+                    </div>
+                    <div id="workout-times" class="workout-times hidden">
+                        <span>Início: <strong id="time-start">--:--</strong></span>
+                        <span>Fim: <strong id="time-end">--:--</strong></span>
+                    </div>
+                </div>
+
+                <div id="workout-tips" class="workout-tips">
+                    <!-- Dicas injetadas via JS -->
+                </div>
+
+                <div class="exercise-list-header">
+                    <h3>Exercícios</h3>
+                    <span id="progress-text">0 / 0</span>
+                </div>
+                
+                <div class="progress-bar-container">
+                    <div id="progress-bar" class="progress-bar"></div>
+                </div>
+
+                <div id="exercise-list" class="exercise-list">
+                    <!-- Exercícios injetados via JS -->
+                </div>
+
+                <div class="workout-footer">
+                    <button id="btn-finish" class="btn-success hidden">
+                        <i class="ph-fill ph-check-circle"></i> Finalizar Treino
+                    </button>
+                </div>
+
+            </section>
+        </main>
+        
+    </div>
+
+    <!-- MODAIS (fora do app-container para garantir centralização correta no viewport) -->
+
+    <!-- MODAL DE AJUDA -->
+    <div id="info-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modal-title">Título</h3>
+                <button id="btn-close-modal" class="btn-icon"><i class="ph ph-x"></i></button>
+            </div>
+            <div class="modal-body">
+                <p id="modal-text">Texto explicativo...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL DE DESCANSO -->
+    <div id="rest-modal" class="modal-overlay hidden">
+        <div class="modal-content rest-content">
+            <div class="modal-header">
+                <h3 id="rest-title" style="text-align: center; width: 100%; color: white;">Descanso</h3>
+            </div>
+            <p id="rest-target-text" style="text-align: center; font-size: 13px; color: var(--text-muted); margin-top: -8px; margin-bottom: 4px;">Alvo: --</p>
+            <div class="modal-body rest-body">
+                <div class="rest-timer-container">
+                    <span id="rest-timer-text" class="rest-time-status-normal">00:00</span>
+                </div>
+                <p id="rest-status-text">Recuperação normal</p>
+                
+                <div class="swipe-container">
+                    <div class="swipe-track"></div>
+                    <span class="swipe-text">Deslize para continuar</span>
+                    <input type="range" id="swipe-unlock" min="0" max="100" value="0">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Custom JS -->
+    <script src="app.js"></script>
+</body>
+</html>

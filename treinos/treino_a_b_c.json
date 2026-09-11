@@ -1,0 +1,82 @@
+{
+  "metodologia": {
+    "rotacao": "Não tente encaixar obrigatoriamente A/B/C dentro de uma semana de segunda a domingo. Use uma rotação contínua (A → B → C).",
+    "progressao_dupla": "Use progressão dupla. Exemplo (4x6-8): Mantenha a carga até conseguir 8 repetições em todas as 4 séries. Ao conseguir, aumente a carga na próxima sessão e comece novamente tentando 6 repetições.",
+    "intensidade": {
+      "compostos": "Exercícios grandes (Agachamento, supino, remada, stiff): RIR 1–2 (terminar a série sentindo que conseguiria fazer mais 1-2 repetições).",
+      "isoladores": "Exercícios isoladores (Elevação lateral, extensora, flexora, roscas, tríceps): RIR 0–2. Pode chegar muito mais próximo da falha com segurança."
+    },
+    "descanso": "Compostos pesados: 2–3 min. Compostos moderados: 90–120s. Isoladores: 60–90s."
+  },
+  "treinos": [
+    {
+      "id": "treino-a",
+      "nome": "Treino A",
+      "foco": "Peito + Ombros + Tríceps + Abdômen",
+      "duracao": "~65–75 min",
+      "observacoes": [
+        "O deltoide anterior já recebe bastante trabalho nos supinos e desenvolvimento. Por isso, a elevação lateral tem mais espaço.",
+        "Tríceps: duas variações incluídas, uma com maior possibilidade de carga (polia) e outra com alongamento maior (francês).",
+        "💡 Dica de tempo: Faça supersérie inteligente no final: Elevação lateral → descanso curto → Tríceps corda → descanso normal → repete."
+      ],
+      "exercicios": [
+        { "nome": "Supino reto com barra", "series_reps": "4 × 6–8", "descanso": "2–3 min", "rir": "1-2" },
+        { "nome": "Supino inclinado com halteres", "series_reps": "3 × 8–10", "descanso": "90–120s", "rir": "1-2" },
+        { "nome": "Desenvolvimento com halteres", "series_reps": "3 × 8–10", "descanso": "90–120s", "rir": "1-2" },
+        { "nome": "Elevação lateral", "series_reps": "4 × 10–15", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Crucifixo ou Crossover", "series_reps": "2 × 10–15", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Tríceps na polia com corda", "series_reps": "3 × 8–12", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Tríceps francês unilateral", "series_reps": "3 × 10–12", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Abdominal na polia", "series_reps": "3 × 10–15", "descanso": "60s", "rir": "0-2" },
+        { "nome": "Prancha", "series_reps": "2 × 30–60s", "descanso": "45–60s", "rir": "0-2" }
+      ]
+    },
+    {
+      "id": "treino-b",
+      "nome": "Treino B",
+      "foco": "Pernas + Panturrilha + Lombar",
+      "duracao": "~70–80 min",
+      "observacoes": [
+        "Esse será um dos treinos mais importantes. A espinha dorsal agora é: Agachamento + Leg Press + Stiff.",
+        "Panturrilha: Não faça rapidamente. Amplitude é vital. Use a cadência: descer controlando → alongar embaixo → subir forte → contrair em cima.",
+        "Panturrilha em pé foca mais no gastrocnêmio; Panturrilha sentado foca mais no sóleo."
+      ],
+      "exercicios": [
+        { "nome": "Agachamento livre", "series_reps": "4 × 6–8", "descanso": "2–3 min", "rir": "1-2" },
+        { "nome": "Leg press 45°", "series_reps": "3 × 8–12", "descanso": "2 min", "rir": "1-2" },
+        { "nome": "Cadeira extensora", "series_reps": "3 × 10–15", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Stiff com barra/halteres", "series_reps": "3 × 8–10", "descanso": "2 min", "rir": "1-2" },
+        { "nome": "Mesa ou Cadeira flexora", "series_reps": "3 × 10–12", "descanso": "90s", "rir": "0-2" },
+        { "nome": "Cadeira adutora", "series_reps": "2 × 12–15", "descanso": "60s", "rir": "0-2" },
+        { "nome": "Panturrilha em pé", "series_reps": "4 × 8–12", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Panturrilha sentado", "series_reps": "4 × 12–20", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Extensão lombar", "series_reps": "3 × 10–15", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Abdominal reverso", "series_reps": "3 × 10–15", "descanso": "60s", "rir": "0-2" }
+      ]
+    },
+    {
+      "id": "treino-c",
+      "nome": "Treino C",
+      "foco": "Costas + Bíceps + Posterior de ombro + Core",
+      "duracao": "~65–75 min",
+      "observacoes": [
+        "A combinação de puxada vertical, remada livre, remada horizontal e puxada unilateral dá um estímulo completo para as costas.",
+        "Face pull incluído para fortalecimento de posterior de ombro e estabilizadores da escápula.",
+        "💡 Dica de tempo: Fazer supersérie Face pull + Panturrilha funciona muito bem para economizar tempo."
+      ],
+      "exercicios": [
+        { "nome": "Barra fixa ou Puxador frente", "series_reps": "4 × 6–10", "descanso": "2 min", "rir": "1-2" },
+        { "nome": "Remada curvada com barra", "series_reps": "3 × 6–10", "descanso": "2–3 min", "rir": "1-2" },
+        { "nome": "Remada baixa triângulo", "series_reps": "3 × 8–12", "descanso": "90–120s", "rir": "1-2" },
+        { "nome": "Puxada unilateral na polia", "series_reps": "2 × 10–12", "descanso": "60–90s", "rir": "1-2" },
+        { "nome": "Face pull", "series_reps": "3 × 12–15", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Rosca direta com barra", "series_reps": "3 × 6–10", "descanso": "90s", "rir": "0-2" },
+        { "nome": "Rosca Scott máquina", "series_reps": "3 × 8–12", "descanso": "90s", "rir": "0-2" },
+        { "nome": "Rosca martelo", "series_reps": "3 × 10–12", "descanso": "60–90s", "rir": "0-2" },
+        { "nome": "Elevação de pernas", "series_reps": "3 × 8–15", "descanso": "60s", "rir": "0-2" },
+        { "nome": "Pallof press", "series_reps": "2 × 10–15/lado", "descanso": "45–60s", "rir": "0-2" },
+        { "nome": "Panturrilha", "series_reps": "3 × 12–20", "descanso": "60s", "rir": "0-2" }
+      ]
+    }
+  ]
+}
