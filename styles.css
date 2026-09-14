@@ -331,6 +331,10 @@ body {
     margin-bottom: 16px;
 }
 
+.last-workout-card.hidden {
+    display: none;
+}
+
 .last-workout-card h4 {
     font-size: 13px;
     text-transform: uppercase;
@@ -385,6 +389,10 @@ body {
     font-size: 13px;
     line-height: 1.5;
     color: var(--text-secondary);
+}
+
+.last-workout-missed.hidden {
+    display: none;
 }
 
 /* Metodologia */
