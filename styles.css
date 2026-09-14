@@ -217,7 +217,7 @@ body {
 ========================================= */
 .app-main {
     flex: 1;
-    padding: 24px 20px calc(88px + env(safe-area-inset-bottom)) 20px;
+    padding: 24px 20px calc(104px + env(safe-area-inset-bottom)) 20px;
 }
 
 /* =========================================
@@ -965,7 +965,7 @@ input[type="range"]#swipe-unlock::-moz-range-thumb {
 ========================================= */
 @media (min-width: 768px) {
     .app-main {
-        padding: 32px;
+        padding: 32px 32px calc(104px + env(safe-area-inset-bottom)) 32px;
     }
     .workout-card {
         padding: 24px;
