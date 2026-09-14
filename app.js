@@ -387,18 +387,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Back to selection
-    btnBack.addEventListener('click', () => {
-        if(isTimerRunning || secondsElapsed > 0) {
-            const confirmLeave = confirm("Você tem um treino em andamento. Deseja realmente sair? O progresso será salvo.");
-            if(!confirmLeave) return;
-        }
-
+    function goToSelection() {
         treinoSubview = 'selection';
         viewWorkout.classList.remove('view-active');
         setTimeout(() => {
             activateView(viewSelection);
             btnBack.classList.add('hidden');
         }, 10);
+    }
+
+    btnBack.addEventListener('click', () => {
+        if(isTimerRunning || secondsElapsed > 0) {
+            const confirmLeave = confirm("Você tem um treino em andamento. Sair agora irá encerrar o treino. Deseja realmente sair?");
+            if(!confirmLeave) return;
+        }
+        goToSelection();
     });
 
     // Timer Logic
@@ -467,6 +470,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Finish Workout
     btnFinish.addEventListener('click', () => {
+        if(!confirm("Deseja finalizar o treino?")) return;
+
         if(isTimerRunning) toggleTimer();
 
         const now = new Date();
@@ -498,9 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         // Reset after some time or keep it
         setTimeout(() => {
-            alert("Parabéns! Treino finalizado e registrado.");
-            // In a real app, you'd save this to a database here.
-            btnBack.click();
+            goToSelection();
             btnTimer.style.display = 'flex';
             btnFinish.disabled = false;
         }, 1500);
