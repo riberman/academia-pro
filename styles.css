@@ -322,6 +322,47 @@ body {
     line-height: 1.4;
 }
 
+/* Último Treino */
+.last-workout-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius-lg);
+    padding: 20px;
+    margin-bottom: 16px;
+}
+
+.last-workout-card h4 {
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.last-workout-card .last-workout-name {
+    font-size: 18px;
+    font-weight: 600;
+    margin-bottom: 12px;
+}
+
+.last-workout-stats {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 16px;
+}
+
+.last-workout-stat {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.last-workout-stat i {
+    color: var(--accent-primary);
+}
+
 /* Metodologia */
 .methodology-card {
     background: var(--bg-surface);
@@ -537,6 +578,11 @@ body {
 .exercise-item.done {
     opacity: 0.6;
     background: rgba(30, 41, 59, 0.3);
+}
+
+.exercise-item.active-exercise {
+    border-color: var(--accent-primary);
+    box-shadow: 0 0 0 2px var(--accent-primary-transparent);
 }
 
 .exercise-item.done .exercise-name {

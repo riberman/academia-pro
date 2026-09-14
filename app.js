@@ -3,14 +3,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let workoutData = null;
     let currentWorkout = null;
     let timerInterval = null;
-    let secondsElapsed = 0;
+    let secondsElapsed = 0; // seconds accumulated while paused
+    let runStartEpoch = null; // Date.now() when the current running period started
     let isTimerRunning = false;
+
+    function getElapsedSeconds() {
+        if (isTimerRunning && runStartEpoch) {
+            return secondsElapsed + Math.floor((Date.now() - runStartEpoch) / 1000);
+        }
+        return secondsElapsed;
+    }
     
     // DOM Elements
     const viewSelection = document.getElementById('view-selection');
     const viewWorkout = document.getElementById('view-workout');
     const btnBack = document.getElementById('btn-back');
     const workoutListEl = document.getElementById('workout-list');
+    const lastWorkoutCardEl = document.getElementById('last-workout-card');
     const methodologyContentEl = document.getElementById('methodology-content');
     
     // Workout View Elements
@@ -107,8 +116,42 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Render summary card for the last completed workout (kept in localStorage,
+    // only ever overwritten - not a history log)
+    function renderLastWorkoutCard() {
+        if (!lastWorkoutCardEl) return;
+        const saved = localStorage.getItem('academiaProLastWorkout');
+        if (!saved) {
+            lastWorkoutCardEl.classList.add('hidden');
+            return;
+        }
+        try {
+            const last = JSON.parse(saved);
+            const totalSeconds = last.totalSeconds || 0;
+            const mins = Math.floor(totalSeconds / 60);
+            const secs = totalSeconds % 60;
+            const durationText = `${mins}min ${String(secs).padStart(2, '0')}s`;
+
+            lastWorkoutCardEl.innerHTML = `
+                <h4><i class="ph ph-check-circle"></i> Último treino</h4>
+                <div class="last-workout-name">${last.workoutName}</div>
+                <div class="last-workout-stats">
+                    <span class="last-workout-stat"><i class="ph ph-check"></i> ${last.doneExercises} concluídos</span>
+                    <span class="last-workout-stat"><i class="ph ph-x"></i> ${last.missedExercises} não feitos</span>
+                    <span class="last-workout-stat"><i class="ph ph-clock"></i> ${durationText}</span>
+                </div>
+            `;
+            lastWorkoutCardEl.classList.remove('hidden');
+        } catch (e) {
+            console.error("Erro ao carregar último treino", e);
+            lastWorkoutCardEl.classList.add('hidden');
+        }
+    }
+
     // Render Selection Screen
     function renderSelectionView() {
+        renderLastWorkoutCard();
+
         // Render Workouts
         workoutListEl.innerHTML = '';
         workoutData.treinos.forEach(treino => {
@@ -230,7 +273,8 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPlus.addEventListener('click', (e) => {
                 e.stopPropagation();
                 if(!isTimerRunning && secondsElapsed === 0) toggleTimer();
-                
+                setActiveExercise(item);
+
                 if (currentSets < maxSets) {
                     currentSets++;
                     updateItemStatus();
@@ -293,12 +337,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function toggleTimer() {
         if (isTimerRunning) {
-            // Pause
+            // Pause - freeze the accumulated seconds using the real clock
+            secondsElapsed = getElapsedSeconds();
+            runStartEpoch = null;
             clearInterval(timerInterval);
             isTimerRunning = false;
             btnTimer.innerHTML = '<i class="ph-fill ph-play-circle"></i> Retomar Treino';
             btnTimer.className = 'btn-primary';
             timerDisplay.classList.remove('active');
+            saveSession();
         } else {
             // Start
             if (secondsElapsed === 0) {
@@ -307,14 +354,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 workoutTimes.classList.remove('hidden');
                 btnFinish.classList.remove('hidden');
             }
-            
+
+            runStartEpoch = Date.now();
             isTimerRunning = true;
             btnTimer.innerHTML = '<i class="ph-fill ph-pause-circle"></i> Pausar Treino';
             btnTimer.className = 'btn-danger';
             timerDisplay.classList.add('active');
-            
+
+            // The interval only triggers redraws; the actual value always comes from
+            // the wall clock, so throttled/suspended timers (screen locked) don't drift.
             timerInterval = setInterval(() => {
-                secondsElapsed++;
                 updateTimerDisplay();
                 saveSession();
             }, 1000);
@@ -322,10 +371,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateTimerDisplay() {
-        const hrs = Math.floor(secondsElapsed / 3600);
-        const mins = Math.floor((secondsElapsed % 3600) / 60);
-        const secs = secondsElapsed % 60;
-        timerDisplay.textContent = 
+        const total = getElapsedSeconds();
+        const hrs = Math.floor(total / 3600);
+        const mins = Math.floor((total % 3600) / 60);
+        const secs = total % 60;
+        timerDisplay.textContent =
             (hrs > 0 ? String(hrs).padStart(2, '0') + ':' : '') +
             String(mins).padStart(2, '0') + ':' +
             String(secs).padStart(2, '0');
@@ -334,6 +384,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function resetTimerUI() {
         clearInterval(timerInterval);
         secondsElapsed = 0;
+        runStartEpoch = null;
         isTimerRunning = false;
         timerDisplay.textContent = '00:00';
         timerDisplay.classList.remove('active');
@@ -348,13 +399,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Finish Workout
     btnFinish.addEventListener('click', () => {
         if(isTimerRunning) toggleTimer();
-        
+
         const now = new Date();
         timeEndEl.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
         btnFinish.innerHTML = '<i class="ph-fill ph-check-circle"></i> Treino Concluído!';
         btnFinish.disabled = true;
         btnTimer.style.display = 'none';
-        
+        clearActiveExercise();
+
+        // Save summary of last completed workout (overwrites any previous one)
+        const items = document.querySelectorAll('.exercise-item');
+        const doneItems = document.querySelectorAll('.exercise-item.done');
+        localStorage.setItem('academiaProLastWorkout', JSON.stringify({
+            workoutName: currentWorkout.nome,
+            totalSeconds: getElapsedSeconds(),
+            totalExercises: items.length,
+            doneExercises: doneItems.length,
+            missedExercises: items.length - doneItems.length,
+            finishedAt: new Date().getTime()
+        }));
+        renderLastWorkoutCard();
+
         // Clear session from storage
         localStorage.removeItem('academiaProSession');
         
@@ -367,6 +432,20 @@ document.addEventListener('DOMContentLoaded', () => {
             btnFinish.disabled = false;
         }, 1500);
     });
+
+    // Highlights the exercise currently being executed (only one at a time)
+    function setActiveExercise(item) {
+        document.querySelectorAll('.exercise-item.active-exercise').forEach(el => {
+            if (el !== item) el.classList.remove('active-exercise');
+        });
+        item.classList.add('active-exercise');
+    }
+
+    function clearActiveExercise() {
+        document.querySelectorAll('.exercise-item.active-exercise').forEach(el => {
+            el.classList.remove('active-exercise');
+        });
+    }
 
     // Progress Logic
     function updateProgress() {
@@ -391,7 +470,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 
         const session = {
             workoutId: currentWorkout.id,
-            secondsElapsed: secondsElapsed,
+            secondsElapsed: getElapsedSeconds(),
             startTime: timeStartEl.textContent,
             doneIndexes: doneIndexes,
             timestamp: new Date().getTime()
@@ -467,7 +546,13 @@ document.addEventListener('DOMContentLoaded', () => {
     const restTargetText = document.getElementById('rest-target-text');
     const swipeUnlock = document.getElementById('swipe-unlock');
     let restInterval = null;
-    let restSeconds = 0;
+    let restStartEpoch = null;
+    let restMinTarget = 0;
+    let restMaxTarget = 0;
+
+    function getRestSeconds() {
+        return restStartEpoch ? Math.floor((Date.now() - restStartEpoch) / 1000) : 0;
+    }
 
     function formatRestTarget(seconds) {
         if (seconds >= 60) {
@@ -486,12 +571,14 @@ document.addEventListener('DOMContentLoaded', () => {
             ? formatRestTarget(minSeconds)
             : `${formatRestTarget(minSeconds)} – ${formatRestTarget(maxSeconds)}`;
         if(restTargetText) restTargetText.textContent = `Alvo: ${rangeText}`;
-        restSeconds = 0;
+        restMinTarget = minSeconds;
+        restMaxTarget = maxSeconds;
+        restStartEpoch = Date.now();
         updateRestDisplay(minSeconds, maxSeconds);
-        
+
+        // Redraw off the wall clock so a locked/backgrounded screen doesn't cause drift.
         clearInterval(restInterval);
         restInterval = setInterval(() => {
-            restSeconds++;
             updateRestDisplay(minSeconds, maxSeconds);
         }, 1000);
     }
@@ -500,10 +587,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if(!restModal) return;
         restModal.classList.add('hidden');
         clearInterval(restInterval);
+        restStartEpoch = null;
     }
 
     function updateRestDisplay(minTarget, maxTarget) {
         if(!restTimerText) return;
+        const restSeconds = getRestSeconds();
         const mins = Math.floor(restSeconds / 60);
         const secs = restSeconds % 60;
         restTimerText.textContent = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
@@ -539,6 +628,16 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+
+    // Both timers are computed off Date.now(), so they stay accurate even if the
+    // interval is throttled while the screen is locked. This just forces an
+    // immediate redraw the moment the app becomes visible again, instead of
+    // waiting up to 1s for the next tick.
+    document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState !== 'visible') return;
+        if (isTimerRunning) updateTimerDisplay();
+        if (restStartEpoch) updateRestDisplay(restMinTarget, restMaxTarget);
+    });
 
     // Start App
     init();
