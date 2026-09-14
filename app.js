@@ -131,6 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const mins = Math.floor(totalSeconds / 60);
             const secs = totalSeconds % 60;
             const durationText = `${mins}min ${String(secs).padStart(2, '0')}s`;
+            const missedNames = last.missedExerciseNames || [];
+            const hasMissed = missedNames.length > 0;
 
             lastWorkoutCardEl.innerHTML = `
                 <h4><i class="ph ph-check-circle"></i> Último treino</h4>
@@ -140,8 +142,29 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class="last-workout-stat"><i class="ph ph-x"></i> ${last.missedExercises} não feitos</span>
                     <span class="last-workout-stat"><i class="ph ph-clock"></i> ${durationText}</span>
                 </div>
+                ${hasMissed ? `
+                    <button id="btn-toggle-missed" class="last-workout-toggle">
+                        <i class="ph ph-caret-down"></i> Ver não executados
+                    </button>
+                    <div id="last-workout-missed" class="last-workout-missed hidden">
+                        ${missedNames.join(', ')}
+                    </div>
+                ` : ''}
             `;
             lastWorkoutCardEl.classList.remove('hidden');
+
+            if (hasMissed) {
+                const btnToggle = document.getElementById('btn-toggle-missed');
+                const missedEl = document.getElementById('last-workout-missed');
+                btnToggle.addEventListener('click', () => {
+                    const expanded = !missedEl.classList.contains('hidden');
+                    missedEl.classList.toggle('hidden', expanded);
+                    btnToggle.classList.toggle('expanded', !expanded);
+                    btnToggle.innerHTML = expanded
+                        ? '<i class="ph ph-caret-down"></i> Ver não executados'
+                        : '<i class="ph ph-caret-up"></i> Fechar';
+                });
+            }
         } catch (e) {
             console.error("Erro ao carregar último treino", e);
             lastWorkoutCardEl.classList.add('hidden');
@@ -410,12 +433,15 @@ document.addEventListener('DOMContentLoaded', () => {
         // Save summary of last completed workout (overwrites any previous one)
         const items = document.querySelectorAll('.exercise-item');
         const doneItems = document.querySelectorAll('.exercise-item.done');
+        const missedItems = document.querySelectorAll('.exercise-item:not(.done)');
+        const missedNames = Array.from(missedItems).map(item => item.querySelector('.exercise-name').textContent);
         localStorage.setItem('academiaProLastWorkout', JSON.stringify({
             workoutName: currentWorkout.nome,
             totalSeconds: getElapsedSeconds(),
             totalExercises: items.length,
             doneExercises: doneItems.length,
             missedExercises: items.length - doneItems.length,
+            missedExerciseNames: missedNames,
             finishedAt: new Date().getTime()
         }));
         renderLastWorkoutCard();
