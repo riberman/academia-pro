@@ -66,10 +66,6 @@
                     </div>
                     <p id="error-message" style="color: #ef4444; margin-top: 8px; font-size: 14px; display: none;"></p>
                 </div>
-                <div id="last-workout-card" class="last-workout-card hidden">
-                    <!-- Resumo do último treino injetado via JS -->
-                </div>
-
                 <div id="workout-list" class="workout-list">
                     <!-- Cards de treino injetados via JS -->
                 </div>
@@ -127,8 +123,31 @@
                 </div>
 
             </section>
+
+            <!-- VIEW: HISTÓRICO -->
+            <section id="view-history" class="view hidden">
+                <div class="welcome-section">
+                    <h2>Histórico</h2>
+                    <p>Seus últimos 10 treinos concluídos.</p>
+                </div>
+                <div id="history-list" class="history-list">
+                    <!-- Cards de histórico injetados via JS -->
+                </div>
+            </section>
         </main>
-        
+
+        <!-- NAVEGAÇÃO INFERIOR -->
+        <nav class="bottom-nav">
+            <button id="btn-tab-treino" class="bottom-nav-item active">
+                <i class="ph-fill ph-barbell"></i>
+                <span>Treino</span>
+            </button>
+            <button id="btn-tab-historico" class="bottom-nav-item">
+                <i class="ph ph-clock-counter-clockwise"></i>
+                <span>Histórico</span>
+            </button>
+        </nav>
+
     </div>
 
     <!-- MODAIS (fora do app-container para garantir centralização correta no viewport) -->

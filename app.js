@@ -17,10 +17,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // DOM Elements
     const viewSelection = document.getElementById('view-selection');
     const viewWorkout = document.getElementById('view-workout');
+    const viewHistory = document.getElementById('view-history');
     const btnBack = document.getElementById('btn-back');
     const workoutListEl = document.getElementById('workout-list');
-    const lastWorkoutCardEl = document.getElementById('last-workout-card');
+    const historyListEl = document.getElementById('history-list');
     const methodologyContentEl = document.getElementById('methodology-content');
+
+    // Bottom Navigation
+    const btnTabTreino = document.getElementById('btn-tab-treino');
+    const btnTabHistorico = document.getElementById('btn-tab-historico');
+    let currentTab = 'treino'; // 'treino' | 'historico'
+    let treinoSubview = 'selection'; // 'selection' | 'workout'
+
+    function activateView(viewEl) {
+        [viewSelection, viewWorkout, viewHistory].forEach(v => v.classList.remove('view-active'));
+        viewEl.classList.add('view-active');
+    }
+
+    function updateTabUI() {
+        btnTabTreino.classList.toggle('active', currentTab === 'treino');
+        btnTabHistorico.classList.toggle('active', currentTab === 'historico');
+    }
+
+    function showTreinoTab() {
+        currentTab = 'treino';
+        activateView(treinoSubview === 'workout' ? viewWorkout : viewSelection);
+        btnBack.classList.toggle('hidden', treinoSubview !== 'workout');
+        updateTabUI();
+    }
+
+    function showHistoricoTab() {
+        currentTab = 'historico';
+        activateView(viewHistory);
+        btnBack.classList.add('hidden');
+        renderHistoryView();
+        updateTabUI();
+    }
+
+    btnTabTreino.addEventListener('click', showTreinoTab);
+    btnTabHistorico.addEventListener('click', showHistoricoTab);
     
     // Workout View Elements
     const wTitle = document.getElementById('workout-title');
@@ -116,65 +151,78 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Render summary card for the last completed workout (kept in localStorage,
-    // only ever overwritten - not a history log)
-    function renderLastWorkoutCard() {
-        if (!lastWorkoutCardEl) return;
-        const saved = localStorage.getItem('academiaProLastWorkout');
-        if (!saved) {
-            lastWorkoutCardEl.classList.add('hidden');
+    // Workout History (kept in localStorage, last 10 completed workouts, newest first)
+    function getWorkoutHistory() {
+        try {
+            const saved = localStorage.getItem('academiaProWorkoutHistory');
+            return saved ? JSON.parse(saved) : [];
+        } catch (e) {
+            console.error("Erro ao carregar histórico", e);
+            return [];
+        }
+    }
+
+    function formatHistoryDate(timestamp) {
+        const d = new Date(timestamp);
+        return `${d.toLocaleDateString('pt-BR', {day: '2-digit', month: '2-digit'})} às ${d.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit'})}`;
+    }
+
+    function buildWorkoutSummaryCard(entry) {
+        const totalSeconds = entry.totalSeconds || 0;
+        const mins = Math.floor(totalSeconds / 60);
+        const secs = totalSeconds % 60;
+        const durationText = `${mins}min ${String(secs).padStart(2, '0')}s`;
+        const missedNames = entry.missedExerciseNames || [];
+        const hasMissed = missedNames.length > 0;
+
+        const card = document.createElement('div');
+        card.className = 'last-workout-card';
+        card.innerHTML = `
+            <div class="last-workout-date">${formatHistoryDate(entry.finishedAt)}</div>
+            <div class="last-workout-name">${entry.workoutName}</div>
+            <div class="last-workout-stats">
+                <span class="last-workout-stat"><i class="ph ph-check"></i> ${entry.doneExercises} concluídos</span>
+                <span class="last-workout-stat"><i class="ph ph-x"></i> ${entry.missedExercises} não feitos</span>
+                <span class="last-workout-stat"><i class="ph ph-clock"></i> ${durationText}</span>
+            </div>
+            ${hasMissed ? `
+                <button class="last-workout-toggle">
+                    <i class="ph ph-caret-down"></i> Ver não executados
+                </button>
+                <div class="last-workout-missed hidden">
+                    ${missedNames.join(', ')}
+                </div>
+            ` : ''}
+        `;
+
+        if (hasMissed) {
+            const btnToggle = card.querySelector('.last-workout-toggle');
+            const missedEl = card.querySelector('.last-workout-missed');
+            btnToggle.addEventListener('click', () => {
+                const expanded = !missedEl.classList.contains('hidden');
+                missedEl.classList.toggle('hidden', expanded);
+                btnToggle.innerHTML = expanded
+                    ? '<i class="ph ph-caret-down"></i> Ver não executados'
+                    : '<i class="ph ph-caret-up"></i> Fechar';
+            });
+        }
+
+        return card;
+    }
+
+    function renderHistoryView() {
+        if (!historyListEl) return;
+        const history = getWorkoutHistory();
+        historyListEl.innerHTML = '';
+        if (history.length === 0) {
+            historyListEl.innerHTML = '<p class="history-empty">Nenhum treino concluído ainda.</p>';
             return;
         }
-        try {
-            const last = JSON.parse(saved);
-            const totalSeconds = last.totalSeconds || 0;
-            const mins = Math.floor(totalSeconds / 60);
-            const secs = totalSeconds % 60;
-            const durationText = `${mins}min ${String(secs).padStart(2, '0')}s`;
-            const missedNames = last.missedExerciseNames || [];
-            const hasMissed = missedNames.length > 0;
-
-            lastWorkoutCardEl.innerHTML = `
-                <h4><i class="ph ph-check-circle"></i> Último treino</h4>
-                <div class="last-workout-name">${last.workoutName}</div>
-                <div class="last-workout-stats">
-                    <span class="last-workout-stat"><i class="ph ph-check"></i> ${last.doneExercises} concluídos</span>
-                    <span class="last-workout-stat"><i class="ph ph-x"></i> ${last.missedExercises} não feitos</span>
-                    <span class="last-workout-stat"><i class="ph ph-clock"></i> ${durationText}</span>
-                </div>
-                ${hasMissed ? `
-                    <button id="btn-toggle-missed" class="last-workout-toggle">
-                        <i class="ph ph-caret-down"></i> Ver não executados
-                    </button>
-                    <div id="last-workout-missed" class="last-workout-missed hidden">
-                        ${missedNames.join(', ')}
-                    </div>
-                ` : ''}
-            `;
-            lastWorkoutCardEl.classList.remove('hidden');
-
-            if (hasMissed) {
-                const btnToggle = document.getElementById('btn-toggle-missed');
-                const missedEl = document.getElementById('last-workout-missed');
-                btnToggle.addEventListener('click', () => {
-                    const expanded = !missedEl.classList.contains('hidden');
-                    missedEl.classList.toggle('hidden', expanded);
-                    btnToggle.classList.toggle('expanded', !expanded);
-                    btnToggle.innerHTML = expanded
-                        ? '<i class="ph ph-caret-down"></i> Ver não executados'
-                        : '<i class="ph ph-caret-up"></i> Fechar';
-                });
-            }
-        } catch (e) {
-            console.error("Erro ao carregar último treino", e);
-            lastWorkoutCardEl.classList.add('hidden');
-        }
+        history.forEach(entry => historyListEl.appendChild(buildWorkoutSummaryCard(entry)));
     }
 
     // Render Selection Screen
     function renderSelectionView() {
-        renderLastWorkoutCard();
-
         // Render Workouts
         workoutListEl.innerHTML = '';
         workoutData.treinos.forEach(treino => {
@@ -328,13 +376,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
         resetTimerUI();
         updateProgress();
-        
+
         // Switch View
+        treinoSubview = 'workout';
         viewSelection.classList.remove('view-active');
         setTimeout(() => {
-            viewSelection.classList.add('hidden');
-            viewWorkout.classList.remove('hidden');
-            viewWorkout.classList.add('view-active');
+            activateView(viewWorkout);
             btnBack.classList.remove('hidden');
         }, 300); // Wait fade out (approx)
     }
@@ -346,11 +393,10 @@ document.addEventListener('DOMContentLoaded', () => {
             if(!confirmLeave) return;
         }
 
+        treinoSubview = 'selection';
         viewWorkout.classList.remove('view-active');
         setTimeout(() => {
-            viewWorkout.classList.add('hidden');
-            viewSelection.classList.remove('hidden');
-            viewSelection.classList.add('view-active');
+            activateView(viewSelection);
             btnBack.classList.add('hidden');
         }, 10);
     });
@@ -430,12 +476,13 @@ document.addEventListener('DOMContentLoaded', () => {
         btnTimer.style.display = 'none';
         clearActiveExercise();
 
-        // Save summary of last completed workout (overwrites any previous one)
+        // Save this workout into history (last 10, newest first)
         const items = document.querySelectorAll('.exercise-item');
         const doneItems = document.querySelectorAll('.exercise-item.done');
         const missedItems = document.querySelectorAll('.exercise-item:not(.done)');
         const missedNames = Array.from(missedItems).map(item => item.querySelector('.exercise-name').textContent);
-        localStorage.setItem('academiaProLastWorkout', JSON.stringify({
+        const history = getWorkoutHistory();
+        history.unshift({
             workoutName: currentWorkout.nome,
             totalSeconds: getElapsedSeconds(),
             totalExercises: items.length,
@@ -443,8 +490,8 @@ document.addEventListener('DOMContentLoaded', () => {
             missedExercises: items.length - doneItems.length,
             missedExerciseNames: missedNames,
             finishedAt: new Date().getTime()
-        }));
-        renderLastWorkoutCard();
+        });
+        localStorage.setItem('academiaProWorkoutHistory', JSON.stringify(history.slice(0, 10)));
 
         // Clear session from storage
         localStorage.removeItem('academiaProSession');
