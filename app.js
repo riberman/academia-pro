@@ -1,4 +1,32 @@
 document.addEventListener('DOMContentLoaded', () => {
+    // Notifications: register the service worker (needed for showNotification)
+    // and ask for permission once, on first relevant interaction.
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js').catch(() => {});
+    }
+
+    let notificationPermissionRequested = false;
+    function ensureNotificationPermission() {
+        if (notificationPermissionRequested) return;
+        notificationPermissionRequested = true;
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'default') {
+            Notification.requestPermission();
+        }
+    }
+
+    // iOS Safari only supports notifications for apps added to the Home Screen.
+    const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
+    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    if (isIOS && !isStandalone) {
+        const banner = document.createElement('div');
+        banner.id = 'ios-install-banner';
+        banner.textContent = 'Para receber avisos de descanso com a tela bloqueada, adicione este app à Tela de Início (compartilhar → Adicionar à Tela de Início).';
+        document.body.appendChild(banner);
+        setTimeout(() => banner.classList.add('visible'), 100);
+        banner.addEventListener('click', () => banner.remove());
+    }
+
     // State
     let workoutData = null;
     let currentWorkout = null;
@@ -221,6 +249,89 @@ document.addEventListener('DOMContentLoaded', () => {
         history.forEach(entry => historyListEl.appendChild(buildWorkoutSummaryCard(entry)));
     }
 
+    // Compute missed exercise frequency from history
+    function getMissedExerciseRanking() {
+        const history = getWorkoutHistory();
+        const freq = {};
+        history.forEach(entry => {
+            (entry.missedExerciseNames || []).forEach(name => {
+                const key = name.trim();
+                if (!key) return;
+                freq[key] = (freq[key] || 0) + 1;
+            });
+        });
+        // Sort by frequency descending, return top 10
+        return Object.entries(freq)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 10)
+            .map(([name, count]) => ({ name, count }));
+    }
+
+    // Build the special "NA FORÇA DO ÓDIO" card
+    function buildHateWorkoutCard(ranking) {
+        const card = document.createElement('div');
+        card.className = 'workout-card workout-card--hate';
+        card.id = 'hate-workout-card';
+
+        const exerciseRows = ranking.map((ex, i) =>
+            `<div class="hate-exercise-row">
+                <span class="hate-ex-rank">${i + 1}</span>
+                <span class="hate-ex-name">${ex.name}</span>
+                <span class="hate-ex-count" title="Vezes pulado">
+                    <i class="ph ph-x-circle"></i> ${ex.count}x
+                </span>
+            </div>`
+        ).join('');
+
+        card.innerHTML = `
+            <div class="workout-card-header hate-header">
+                <div class="hate-title-wrap">
+                    <span class="hate-fire">🔥</span>
+                    <h3>NA FORÇA DO ÓDIO</h3>
+                </div>
+                <span class="workout-duration hate-badge">
+                    <i class="ph ph-skull"></i> ${ranking.length} exerc.
+                </span>
+            </div>
+            <p class="hate-subtitle">Seus exercícios mais pulados. É hora de encarar.</p>
+            <div class="hate-exercise-list">
+                ${exerciseRows}
+            </div>
+            <div class="hate-cta">
+                <i class="ph-fill ph-lightning"></i> Iniciar treino
+            </div>
+        `;
+
+        // Build a virtual workout and load it
+        card.addEventListener('click', () => {
+            const virtualWorkout = {
+                id: '__hate__',
+                nome: '🔥 NA FORÇA DO ÓDIO',
+                foco: 'Seus exercícios mais ignorados — encare-os agora!',
+                duracao: '',
+                observacoes: [
+                    '💀 Esses são os exercícios que você mais pulou. Sem desculpas desta vez.',
+                    '🔥 Complete todos para provar que você é maior que as suas limitações.',
+                    '⚠️ Ajuste séries/reps conforme o grupo muscular de cada exercício.'
+                ],
+                exercicios: ranking.map(ex => ({
+                    nome: ex.name,
+                    series_reps: '3 × 8–12',
+                    descanso: '60–90s',
+                    rir: '0-2'
+                }))
+            };
+
+            // Temporarily inject into workoutData and load
+            const prevTreinos = workoutData.treinos;
+            workoutData.treinos = [...prevTreinos, virtualWorkout];
+            loadWorkout('__hate__');
+            workoutData.treinos = prevTreinos;
+        });
+
+        return card;
+    }
+
     // Render Selection Screen
     function renderSelectionView() {
         // Render Workouts
@@ -238,6 +349,15 @@ document.addEventListener('DOMContentLoaded', () => {
             card.addEventListener('click', () => loadWorkout(treino.id));
             workoutListEl.appendChild(card);
         });
+
+        // Render "NA FORÇA DO ÓDIO" card (only if there's history with missed exercises)
+        const hateRanking = getMissedExerciseRanking();
+        const existingHate = document.getElementById('hate-workout-card');
+        if (existingHate) existingHate.remove();
+        if (hateRanking.length > 0) {
+            const hateCard = buildHateWorkoutCard(hateRanking);
+            workoutListEl.appendChild(hateCard);
+        }
 
         // Render Methodology
         methodologyContentEl.innerHTML = `
@@ -343,6 +463,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             btnPlus.addEventListener('click', (e) => {
                 e.stopPropagation();
+                ensureNotificationPermission();
                 if(!isTimerRunning && secondsElapsed === 0) toggleTimer();
                 setActiveExercise(item);
 
@@ -350,7 +471,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     currentSets++;
                     updateItemStatus();
                     if (currentSets < maxSets) {
-                        openRestModal(minRestSeconds, maxRestSeconds);
+                        openRestModal(minRestSeconds, maxRestSeconds, ex.nome, `${currentSets}/${maxSets}`);
                     }
                 }
             });
@@ -625,6 +746,23 @@ document.addEventListener('DOMContentLoaded', () => {
     let restStartEpoch = null;
     let restMinTarget = 0;
     let restMaxTarget = 0;
+    let restExerciseName = '';
+    let restSetLabel = '';
+    let restNotified = false;
+
+    function notifyRestDone() {
+        if (restNotified) return;
+        restNotified = true;
+        navigator.vibrate?.([200, 100, 200]);
+        const body = restExerciseName ? `${restExerciseName} — Série ${restSetLabel}` : 'Hora da próxima série!';
+        navigator.serviceWorker?.ready.then((reg) => {
+            reg.active?.postMessage({
+                type: 'REST_DONE',
+                title: 'Descanso finalizado',
+                body
+            });
+        }).catch(() => {});
+    }
 
     function getRestSeconds() {
         return restStartEpoch ? Math.floor((Date.now() - restStartEpoch) / 1000) : 0;
@@ -639,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return `${seconds}s`;
     }
 
-    function openRestModal(minSeconds, maxSeconds) {
+    function openRestModal(minSeconds, maxSeconds, exerciseName, setLabel) {
         if(!restModal) return;
         restModal.classList.remove('hidden');
         if(swipeUnlock) swipeUnlock.value = 0;
@@ -649,6 +787,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if(restTargetText) restTargetText.textContent = `Alvo: ${rangeText}`;
         restMinTarget = minSeconds;
         restMaxTarget = maxSeconds;
+        restExerciseName = exerciseName || '';
+        restSetLabel = setLabel || '';
+        restNotified = false;
         restStartEpoch = Date.now();
         updateRestDisplay(minSeconds, maxSeconds);
 
@@ -664,6 +805,7 @@ document.addEventListener('DOMContentLoaded', () => {
         restModal.classList.add('hidden');
         clearInterval(restInterval);
         restStartEpoch = null;
+        restNotified = false;
     }
 
     function updateRestDisplay(minTarget, maxTarget) {
@@ -685,6 +827,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             restTimerText.className = 'rest-time-status-over';
             restStatusText.textContent = 'Passou do tempo! Próxima série!';
+            notifyRestDone();
         }
     }
 

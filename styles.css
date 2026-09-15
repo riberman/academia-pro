@@ -1,4 +1,28 @@
 /* =========================================
+   iOS INSTALL BANNER
+========================================= */
+#ios-install-banner {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: -100px;
+    z-index: 9998;
+    background: var(--bg-surface, #1e293b);
+    border: 1px solid var(--glass-border, rgba(255,255,255,0.1));
+    color: white;
+    font-size: 13px;
+    line-height: 1.4;
+    padding: 12px 16px;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+    transition: bottom 0.4s ease;
+}
+
+#ios-install-banner.visible {
+    bottom: 84px;
+}
+
+/* =========================================
    SPLASH SCREEN
 ========================================= */
 #splash-screen {
@@ -958,6 +982,180 @@ input[type="range"]#swipe-unlock::-moz-range-thumb {
     background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 256 256' width='24' height='24'%3E%3Cpath fill='none' stroke='%23000' stroke-linecap='round' stroke-linejoin='round' stroke-width='16' d='M96 208l80-80-80-80'/%3E%3C/svg%3E");
     background-repeat: no-repeat;
     background-position: center;
+}
+
+/* =========================================
+   CARD "NA FORÇA DO ÓDIO"
+========================================= */
+.workout-card--hate {
+    background: linear-gradient(135deg, #1a0a0a 0%, #2d0f0f 60%, #1a0a0a 100%);
+    border: 1px solid rgba(239, 68, 68, 0.35);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+}
+
+/* Animated glow border on hover */
+.workout-card--hate::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    height: 100%;
+    width: 4px;
+    background: linear-gradient(180deg, #ef4444, #f97316, #ef4444);
+    opacity: 0.8;
+    transition: var(--transition-normal);
+}
+
+/* Subtle fire shimmer overlay */
+.workout-card--hate::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: radial-gradient(ellipse at 80% 0%, rgba(239, 68, 68, 0.08), transparent 60%);
+    pointer-events: none;
+}
+
+.workout-card--hate:hover {
+    transform: translateY(-4px);
+    border-color: rgba(239, 68, 68, 0.65);
+    box-shadow: 0 8px 32px rgba(239, 68, 68, 0.25);
+}
+
+.workout-card--hate:hover::before {
+    width: 5px;
+    opacity: 1;
+}
+
+/* Header row */
+.hate-header {
+    align-items: center;
+}
+
+.hate-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.hate-fire {
+    font-size: 22px;
+    animation: hatePulse 1.8s ease-in-out infinite;
+    filter: drop-shadow(0 0 6px rgba(239, 68, 68, 0.7));
+}
+
+@keyframes hatePulse {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 4px rgba(239, 68, 68, 0.6)); }
+    50%       { transform: scale(1.15); filter: drop-shadow(0 0 10px rgba(249, 115, 22, 0.9)); }
+}
+
+.workout-card--hate h3 {
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    color: #fca5a5;
+    text-shadow: 0 0 12px rgba(239, 68, 68, 0.5);
+}
+
+/* Badge override for hate card */
+.hate-badge {
+    background: rgba(239, 68, 68, 0.15) !important;
+    color: #f87171 !important;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+/* Subtitle */
+.hate-subtitle {
+    color: #9ca3af;
+    font-size: 13px;
+    margin-bottom: 16px;
+    margin-top: 4px;
+    line-height: 1.4;
+}
+
+/* Exercise ranking list */
+.hate-exercise-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.hate-exercise-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: var(--radius-sm);
+    padding: 8px 12px;
+    transition: var(--transition-fast);
+}
+
+.workout-card--hate:hover .hate-exercise-row {
+    border-color: rgba(239, 68, 68, 0.12);
+}
+
+.hate-ex-rank {
+    font-size: 11px;
+    font-weight: 800;
+    color: #ef4444;
+    min-width: 18px;
+    text-align: center;
+    opacity: 0.8;
+}
+
+.hate-ex-name {
+    flex: 1;
+    font-size: 14px;
+    font-weight: 500;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.hate-ex-count {
+    font-size: 12px;
+    font-weight: 600;
+    color: #f87171;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.hate-ex-count i {
+    font-size: 13px;
+}
+
+/* CTA row */
+.hate-cta {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.25);
+    border-radius: var(--radius-md);
+    padding: 12px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #f87171;
+    letter-spacing: 0.5px;
+    transition: var(--transition-fast);
+    margin-top: 4px;
+}
+
+.workout-card--hate:hover .hate-cta {
+    background: rgba(239, 68, 68, 0.2);
+    color: #fca5a5;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.2);
+}
+
+.hate-cta i {
+    font-size: 16px;
 }
 
 /* =========================================
