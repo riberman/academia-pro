@@ -15,6 +15,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Web Audio: the AudioContext must be created/resumed inside a user
+    // gesture on iOS, so we set it up here and reuse it later for the beep.
+    let audioCtx = null;
+    function ensureAudioContext() {
+        if (audioCtx) {
+            if (audioCtx.state === 'suspended') audioCtx.resume();
+            return;
+        }
+        const Ctx = window.AudioContext || window.webkitAudioContext;
+        if (Ctx) audioCtx = new Ctx();
+    }
+
+    function playRestBeep() {
+        if (!audioCtx) return;
+        const now = audioCtx.currentTime;
+        [0, 0.22, 0.44].forEach((offset) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.frequency.value = 880;
+            gain.gain.setValueAtTime(0.0001, now + offset);
+            gain.gain.exponentialRampToValueAtTime(0.3, now + offset + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.0001, now + offset + 0.15);
+            osc.connect(gain).connect(audioCtx.destination);
+            osc.start(now + offset);
+            osc.stop(now + offset + 0.16);
+        });
+    }
+
+    // Screen Wake Lock: keeps the screen from auto-locking during rest so
+    // iOS doesn't suspend JS execution before the rest timer finishes.
+    let wakeLockSentinel = null;
+    async function requestWakeLock() {
+        if (!('wakeLock' in navigator)) return;
+        try {
+            wakeLockSentinel = await navigator.wakeLock.request('screen');
+        } catch (e) {}
+    }
+    function releaseWakeLock() {
+        if (wakeLockSentinel) {
+            wakeLockSentinel.release().catch(() => {});
+            wakeLockSentinel = null;
+        }
+    }
+
     // iOS Safari only supports notifications for apps added to the Home Screen.
     const isIOS = /iPhone|iPad|iPod/.test(navigator.userAgent);
     const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
@@ -464,6 +508,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnPlus.addEventListener('click', (e) => {
                 e.stopPropagation();
                 ensureNotificationPermission();
+                ensureAudioContext();
                 if(!isTimerRunning && secondsElapsed === 0) toggleTimer();
                 setActiveExercise(item);
 
@@ -741,6 +786,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const restTimerText = document.getElementById('rest-timer-text');
     const restStatusText = document.getElementById('rest-status-text');
     const restTargetText = document.getElementById('rest-target-text');
+    const restEtaText = document.getElementById('rest-eta-text');
     const swipeUnlock = document.getElementById('swipe-unlock');
     let restInterval = null;
     let restStartEpoch = null;
@@ -754,6 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (restNotified) return;
         restNotified = true;
         navigator.vibrate?.([200, 100, 200]);
+        playRestBeep();
         const body = restExerciseName ? `${restExerciseName} — Série ${restSetLabel}` : 'Hora da próxima série!';
         navigator.serviceWorker?.ready.then((reg) => {
             reg.active?.postMessage({
@@ -791,7 +838,12 @@ document.addEventListener('DOMContentLoaded', () => {
         restSetLabel = setLabel || '';
         restNotified = false;
         restStartEpoch = Date.now();
+        if (restEtaText) {
+            const eta = new Date(restStartEpoch + maxSeconds * 1000);
+            restEtaText.textContent = `Termina às ${eta.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+        }
         updateRestDisplay(minSeconds, maxSeconds);
+        requestWakeLock();
 
         // Redraw off the wall clock so a locked/backgrounded screen doesn't cause drift.
         clearInterval(restInterval);
@@ -806,6 +858,7 @@ document.addEventListener('DOMContentLoaded', () => {
         clearInterval(restInterval);
         restStartEpoch = null;
         restNotified = false;
+        releaseWakeLock();
     }
 
     function updateRestDisplay(minTarget, maxTarget) {
@@ -855,7 +908,10 @@ document.addEventListener('DOMContentLoaded', () => {
     document.addEventListener('visibilitychange', () => {
         if (document.visibilityState !== 'visible') return;
         if (isTimerRunning) updateTimerDisplay();
-        if (restStartEpoch) updateRestDisplay(restMinTarget, restMaxTarget);
+        if (restStartEpoch) {
+            updateRestDisplay(restMinTarget, restMaxTarget);
+            requestWakeLock();
+        }
     });
 
     // Start App
