@@ -1166,6 +1166,28 @@ input[type="range"]#swipe-unlock::-moz-range-thumb {
     font-size: 16px;
 }
 
+/* Floating finish button (visible only while a workout is started) */
+.fab-finish {
+    position: fixed;
+    bottom: calc(88px + env(safe-area-inset-bottom));
+    right: max(16px, calc(50% - 300px + 16px));
+    z-index: 90;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 999px;
+    background: var(--accent-primary);
+    color: #000;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(16, 185, 129, 0.5);
+}
+.fab-finish:hover { background: var(--accent-primary-hover); }
+.fab-finish.hidden { display: none; }
+
 /* =========================================
    MEDIA QUERIES
 ========================================= */

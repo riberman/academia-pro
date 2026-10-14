@@ -116,6 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         activateView(treinoSubview === 'workout' ? viewWorkout : viewSelection);
         btnBack.classList.toggle('hidden', treinoSubview !== 'workout');
         updateTabUI();
+        updateFab();
     }
 
     function showHistoricoTab() {
@@ -124,6 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnBack.classList.add('hidden');
         renderHistoryView();
         updateTabUI();
+        updateFab();
     }
 
     btnTabTreino.addEventListener('click', showTreinoTab);
@@ -142,6 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const timeStartEl = document.getElementById('time-start');
     const timeEndEl = document.getElementById('time-end');
     const btnFinish = document.getElementById('btn-finish');
+    const btnFinishFab = document.getElementById('btn-finish-fab');
     const progressBar = document.getElementById('progress-bar');
     const progressText = document.getElementById('progress-text');
     const filenameSelect = document.getElementById('filename-select');
@@ -555,6 +558,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Back to selection
     function goToSelection() {
         treinoSubview = 'selection';
+        updateFab();
         viewWorkout.classList.remove('view-active');
         setTimeout(() => {
             activateView(viewSelection);
@@ -564,8 +568,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     btnBack.addEventListener('click', () => {
         if(isTimerRunning || secondsElapsed > 0) {
-            const confirmLeave = confirm("Você tem um treino em andamento. Sair agora irá encerrar o treino. Deseja realmente sair?");
-            if(!confirmLeave) return;
+            // Confirm = finish and save (then leaves); cancel = stay on the workout
+            if(confirm("Deseja finalizar o treino atual?")) finishWorkout();
+            return;
         }
         goToSelection();
     });
@@ -605,6 +610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 updateTimerDisplay();
                 saveSession();
             }, 1000);
+            updateFab();
         }
     }
 
@@ -632,13 +638,30 @@ document.addEventListener('DOMContentLoaded', () => {
         timeStartEl.textContent = '--:--';
         timeEndEl.textContent = '--:--';
         btnFinish.classList.add('hidden');
+        updateFab();
+    }
+
+    // Floating finish button: only while a workout is started and visible
+    function updateFab() {
+        const started = isTimerRunning || secondsElapsed > 0;
+        const show = started && currentTab === 'treino' && treinoSubview === 'workout';
+        btnFinishFab.classList.toggle('hidden', !show);
     }
 
     // Finish Workout
     btnFinish.addEventListener('click', () => {
         if(!confirm("Deseja finalizar o treino?")) return;
+        finishWorkout();
+    });
 
+    btnFinishFab.addEventListener('click', () => {
+        if(!confirm("Deseja finalizar o treino?")) return;
+        finishWorkout();
+    });
+
+    function finishWorkout() {
         if(isTimerRunning) toggleTimer();
+        btnFinishFab.classList.add('hidden');
 
         const now = new Date();
         timeEndEl.textContent = now.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
@@ -673,7 +696,7 @@ document.addEventListener('DOMContentLoaded', () => {
             btnTimer.style.display = 'flex';
             btnFinish.disabled = false;
         }, 1500);
-    });
+    }
 
     // Highlights the exercise currently being executed (only one at a time)
     function setActiveExercise(item) {
@@ -739,6 +762,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         timeStartEl.textContent = session.startTime;
                         workoutTimes.classList.remove('hidden');
                         btnFinish.classList.remove('hidden');
+                        updateFab();
                         
                         const items = document.querySelectorAll('.exercise-item');
                         session.doneIndexes.forEach(idx => {
