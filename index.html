@@ -122,10 +122,6 @@
                     </button>
                 </div>
 
-                <button id="btn-finish-fab" class="fab-finish hidden" title="Finalizar treino">
-                    <i class="ph-fill ph-check-circle"></i> Finalizar
-                </button>
-
             </section>
 
             <!-- VIEW: HISTÓRICO -->
@@ -193,6 +189,11 @@
     </div>
 
     <!-- Custom JS -->
+    <!-- Botão flutuante fora das views (views têm transform/animation, que quebram position: fixed) -->
+    <button id="btn-finish-fab" class="fab-finish hidden" title="Finalizar treino">
+        <i class="ph-fill ph-check-circle"></i> Finalizar
+    </button>
+
     <script src="app.js"></script>
 </body>
 </html>

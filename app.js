@@ -15,12 +15,50 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Web Audio: the AudioContext must be created/resumed inside a user
-    // gesture on iOS, so we set it up here and reuse it later for the beep.
+    // Audio: iOS mutes Web Audio when the silent switch is on and can leave the
+    // AudioContext "interrupted". An <audio> element playing a generated WAV
+    // plays through the media channel (headphones included) regardless of the
+    // switch, so it is the primary beep; Web Audio is only a fallback.
+    // Both must be unlocked inside a user gesture.
     let audioCtx = null;
+    let beepAudio = null;
+    let beepUrl = null;
+
+    function buildBeepWavUrl() {
+        const rate = 22050;
+        const total = Math.floor(rate * 0.7);
+        const buf = new ArrayBuffer(44 + total * 2);
+        const v = new DataView(buf);
+        const str = (o, t) => { for (let i = 0; i < t.length; i++) v.setUint8(o + i, t.charCodeAt(i)); };
+        str(0, 'RIFF'); v.setUint32(4, 36 + total * 2, true); str(8, 'WAVE'); str(12, 'fmt ');
+        v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true);
+        v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true);
+        v.setUint16(34, 16, true); str(36, 'data'); v.setUint32(40, total * 2, true);
+        for (let i = 0; i < total; i++) {
+            const t = i / rate;
+            const inBeep = (t % 0.22) < 0.15 && t < 0.59;
+            const env = inBeep ? Math.sin(Math.PI * ((t % 0.22) / 0.15)) : 0;
+            v.setInt16(44 + i * 2, Math.sin(2 * Math.PI * 880 * t) * env * 0.6 * 32767, true);
+        }
+        return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }));
+    }
+
     function ensureAudioContext() {
+        try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch (e) {}
+        if (!beepAudio) {
+            beepUrl = buildBeepWavUrl();
+            beepAudio = new Audio(beepUrl);
+            beepAudio.preload = 'auto';
+            // Unlock playback during the gesture with a silent play.
+            beepAudio.volume = 0;
+            beepAudio.play().then(() => {
+                beepAudio.pause();
+                beepAudio.currentTime = 0;
+                beepAudio.volume = 1;
+            }).catch(() => { beepAudio.volume = 1; });
+        }
         if (audioCtx) {
-            if (audioCtx.state === 'suspended') audioCtx.resume();
+            if (audioCtx.state !== 'running') audioCtx.resume();
             return;
         }
         const Ctx = window.AudioContext || window.webkitAudioContext;
@@ -28,7 +66,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function playRestBeep() {
+        if (beepAudio) {
+            beepAudio.currentTime = 0;
+            beepAudio.volume = 1;
+            const p = beepAudio.play();
+            if (p && p.catch) p.catch(() => playRestBeepWebAudio());
+            return;
+        }
+        playRestBeepWebAudio();
+    }
+
+    function playRestBeepWebAudio() {
         if (!audioCtx) return;
+        if (audioCtx.state !== 'running') audioCtx.resume();
         const now = audioCtx.currentTime;
         [0, 0.22, 0.44].forEach((offset) => {
             const osc = audioCtx.createOscillator();
@@ -901,6 +951,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (restSeconds >= minTarget && restSeconds <= maxTarget + 15) {
             restTimerText.className = 'rest-time-status-target';
             restStatusText.textContent = 'Tempo ideal alcançado!';
+            notifyRestDone();
         } else {
             restTimerText.className = 'rest-time-status-over';
             restStatusText.textContent = 'Passou do tempo! Próxima série!';
