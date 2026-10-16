@@ -2,7 +2,7 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title>Academia Pro | Seu Treino</title>
     <!-- Favicon padrão -->
     <link rel="icon" type="image/png" href="favicon.png">
@@ -33,6 +33,8 @@
             <img src="favicon.png" alt="Academia Pro Logo" class="splash-logo">
             <h1 class="splash-title">Academia Pro</h1>
             <p class="splash-sub">Seu treino, seu ritmo.</p>
+            <!-- Versão do app: atualize este número a cada release (também dispara a atualização offline nos usuários) -->
+            <p class="splash-version" id="app-version">v1.5.0</p>
         </div>
         <div class="splash-bar"></div>
     </div>
@@ -71,7 +73,10 @@
                 </div>
 
                 <div class="methodology-card">
-                    <h3><i class="ph-fill ph-lightbulb"></i> Metodologia</h3>
+                    <h3 id="methodology-toggle" class="methodology-toggle" role="button" tabindex="0" aria-expanded="true">
+                        <i class="ph-fill ph-lightbulb"></i> Metodologia
+                        <i class="ph ph-caret-down methodology-caret"></i>
+                    </h3>
                     <div id="methodology-content">
                         <!-- Conteúdo injetado via JS -->
                     </div>
@@ -87,7 +92,7 @@
                     <div class="timer-section">
                         <div class="time-display">
                             <i class="ph ph-clock"></i>
-                            <span id="timer">00:00:00</span>
+                            <span id="timer">00:00</span>
                         </div>
                         <button id="btn-timer" class="btn-primary">
                             <i class="ph-fill ph-play-circle"></i> Iniciar Treino
@@ -97,14 +102,25 @@
                         <span>Início: <strong id="time-start">--:--</strong></span>
                         <span>Fim: <strong id="time-end">--:--</strong></span>
                     </div>
+                    <div class="quick-mode-row">
+                        <div class="quick-mode-label">
+                            <i class="ph-fill ph-lightning"></i>
+                            <span>Modo rápido</span>
+                            <button id="btn-quick-help" class="btn-icon" title="O que é o modo rápido?">
+                                <i class="ph ph-question"></i>
+                            </button>
+                        </div>
+                        <label class="switch">
+                            <input type="checkbox" id="quick-mode-toggle">
+                            <span class="switch-slider"></span>
+                        </label>
+                    </div>
                 </div>
 
-                <div id="workout-tips" class="workout-tips">
-                    <!-- Dicas injetadas via JS -->
-                </div>
 
                 <div class="exercise-list-header">
                     <h3>Exercícios</h3>
+                    <button id="btn-tips" class="btn-tips hidden" type="button"><i class="ph-fill ph-lightbulb"></i> Dicas</button>
                     <span id="progress-text">0 / 0</span>
                 </div>
                 
@@ -124,12 +140,22 @@
 
             </section>
 
+            <!-- VIEW: TROFÉUS -->
+            <section id="view-trophies" class="view hidden">
+                <div class="welcome-section">
+                    <h2>Troféus</h2>
+                    <p id="trophy-summary">Seus troféus aparecem aqui conforme você treina.</p>
+                </div>
+                <div id="trophy-list" class="trophy-list"></div>
+            </section>
+
             <!-- VIEW: HISTÓRICO -->
             <section id="view-history" class="view hidden">
                 <div class="welcome-section">
                     <h2>Histórico</h2>
-                    <p>Seus últimos 10 treinos concluídos.</p>
+                    <p>Seu desempenho e seus treinos concluídos.</p>
                 </div>
+                <div id="stats-dashboard" class="stats-dashboard"></div>
                 <div id="history-list" class="history-list">
                     <!-- Cards de histórico injetados via JS -->
                 </div>
@@ -141,6 +167,10 @@
             <button id="btn-tab-treino" class="bottom-nav-item active">
                 <i class="ph-fill ph-barbell"></i>
                 <span>Treino</span>
+            </button>
+            <button id="btn-tab-trofeus" class="bottom-nav-item">
+                <i class="ph ph-trophy"></i>
+                <span>Troféus</span>
             </button>
             <button id="btn-tab-historico" class="bottom-nav-item">
                 <i class="ph ph-clock-counter-clockwise"></i>
@@ -178,6 +208,25 @@
                 </div>
                 <p id="rest-eta-text" class="rest-eta-text">Termina às --:--</p>
                 <p id="rest-status-text">Recuperação normal</p>
+
+                <div class="rest-log">
+                    <button type="button" id="btn-rest-log-toggle" class="rest-log-toggle" aria-expanded="false">
+                        <i class="ph ph-note-pencil"></i> <span id="rest-log-toggle-text">Registrar série</span>
+                        <i class="ph ph-caret-down rest-log-caret"></i>
+                    </button>
+                    <div id="rest-log-panel" class="rest-log-panel hidden">
+                        <p id="rest-log-hint" class="log-hint"></p>
+                        <div class="log-fields">
+                            <label class="log-field"><span>Carga (kg)</span>
+                                <input id="rest-log-kg" type="text" inputmode="decimal" autocomplete="off" placeholder="0">
+                            </label>
+                            <label class="log-field"><span>Reps</span>
+                                <input id="rest-log-reps" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
+                            </label>
+                        </div>
+                        <button type="button" id="btn-rest-log-save" class="btn-primary log-save">Salvar</button>
+                    </div>
+                </div>
                 
                 <div class="swipe-container">
                     <div class="swipe-track"></div>
@@ -187,6 +236,89 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL DE CONFIRMAÇÃO -->
+    <div id="confirm-modal" class="modal-overlay hidden">
+        <div class="modal-content confirm-content">
+            <p id="confirm-text" class="confirm-text"></p>
+            <div class="confirm-actions">
+                <button type="button" id="confirm-cancel" class="btn-secondary">Cancelar</button>
+                <button type="button" id="confirm-ok" class="btn-primary">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM SHEET: CARGA E REPS -->
+    <div id="log-sheet" class="modal-overlay sheet-overlay hidden">
+        <div class="modal-content sheet-content">
+            <div class="modal-header">
+                <h3 id="log-sheet-title">Carga e reps</h3>
+                <button id="btn-log-sheet-close" class="btn-icon" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            </div>
+            <p id="log-sheet-hint" class="log-hint"></p>
+            <div id="log-sheet-rows" class="log-sheet-rows"></div>
+            <button type="button" id="btn-log-sheet-save" class="btn-primary log-save">Salvar</button>
+        </div>
+    </div>
+
+    <!-- MODAL: DETALHE DO TROFÉU -->
+    <div id="trophy-modal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="trophy-modal-title">
+        <div class="modal-content trophy-modal-card">
+            <button id="btn-trophy-x" class="btn-icon trophy-modal-x" aria-label="Fechar"><i class="ph ph-x"></i></button>
+            <div class="trophy-modal-art"></div>
+            <span id="trophy-modal-status" class="trophy-chip"></span>
+            <h2 id="trophy-modal-title" class="trophy-modal-title"></h2>
+            <p id="trophy-modal-desc" class="trophy-modal-desc"></p>
+            <div class="trophy-modal-block">
+                <h4><i class="ph ph-target"></i> Como conquistar</h4>
+                <p id="trophy-modal-how"></p>
+            </div>
+            <div class="trophy-modal-block">
+                <h4><i class="ph ph-chart-line-up"></i> Progresso</h4>
+                <div class="trophy-modal-barwrap"><div id="trophy-modal-bar"></div></div>
+                <p id="trophy-modal-progress"></p>
+            </div>
+            <div class="trophy-modal-block">
+                <h4><i class="ph ph-clock-clockwise"></i> Período</h4>
+                <p id="trophy-modal-period"></p>
+                <p id="trophy-modal-times" class="trophy-modal-times"></p>
+            </div>
+            <p id="trophy-modal-quote" class="trophy-modal-quote"></p>
+            <button id="btn-trophy-close" class="btn-primary celebration-close">Fechar</button>
+        </div>
+    </div>
+
+    <!-- MODAL DE COMEMORAÇÃO -->
+    <div id="celebration-modal" class="modal-overlay celebration-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="celebration-title">
+        <canvas id="celebration-canvas" class="celebration-canvas" aria-hidden="true"></canvas>
+        <div class="modal-content celebration-card celebration-level-media">
+            <div class="celebration-badge"><i class="ph-fill ph-trophy"></i></div>
+            <h2 id="celebration-title" class="celebration-title"></h2>
+            <p id="celebration-text" class="celebration-text"></p>
+            <div id="celebration-pills" class="celebration-pills hidden"></div>
+
+            <div id="celebration-share" class="celebration-share hidden">
+                <div class="share-formats" role="radiogroup" aria-label="Formato da imagem">
+                    <button type="button" class="share-format" role="radio" aria-checked="false" data-format="story">Stories<small>9:16</small></button>
+                    <button type="button" class="share-format active" role="radio" aria-checked="true" data-format="feed">Feed<small>4:5</small></button>
+                    <button type="button" class="share-format" role="radio" aria-checked="false" data-format="square">Quadrado<small>1:1</small></button>
+                </div>
+                <div class="share-preview">
+                    <img id="share-preview-img" class="hidden" alt="Pré-visualização da imagem para compartilhar">
+                    <span id="share-status" class="share-status">Preparando imagem…</span>
+                </div>
+                <div class="share-actions">
+                    <button type="button" id="btn-share" class="btn-secondary"><i class="ph ph-share-network"></i> Compartilhar</button>
+                    <button type="button" id="btn-share-save" class="btn-secondary"><i class="ph ph-download-simple"></i> Salvar</button>
+                </div>
+            </div>
+
+            <button type="button" id="btn-celebration-close" class="btn-primary celebration-close">Continuar</button>
+        </div>
+    </div>
+
+    <!-- BANNER: NOVA VERSÃO -->
+    <div id="update-banner" class="update-banner hidden">Nova versão pronta — será aplicada ao finalizar o treino.</div>
 
     <!-- Custom JS -->
     <!-- Botão flutuante fora das views (views têm transform/animation, que quebram position: fixed) -->
