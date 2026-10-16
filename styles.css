@@ -117,6 +117,9 @@
 }
 
 :root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-right: env(safe-area-inset-right, 0px);
+    --safe-left: env(safe-area-inset-left, 0px);
     /* Color Palette - Premium Dark Mode */
     --bg-base: #0f172a; /* Slate 900 */
     --bg-surface: #1e293b; /* Slate 800 */
@@ -196,7 +199,8 @@ body {
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
     border-bottom: 1px solid var(--glass-border);
-    padding: 16px 20px;
+    /* iOS standalone (black-translucent + viewport-fit=cover): keep content below the status bar/notch */
+    padding: calc(16px + var(--safe-top)) max(20px, var(--safe-right)) 16px max(20px, var(--safe-left));
 }
 
 .header-content {
@@ -251,7 +255,7 @@ body {
 ========================================= */
 .app-main {
     flex: 1;
-    padding: 24px 20px calc(104px + env(safe-area-inset-bottom)) 20px;
+    padding: 24px max(20px, var(--safe-right)) calc(104px + env(safe-area-inset-bottom)) max(20px, var(--safe-left));
 }
 
 /* =========================================
