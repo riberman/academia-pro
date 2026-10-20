@@ -34,7 +34,7 @@
             <h1 class="splash-title">Academia Pro</h1>
             <p class="splash-sub">Seu treino, seu ritmo.</p>
             <!-- Versão do app: atualize este número a cada release (também dispara a atualização offline nos usuários) -->
-            <p class="splash-version" id="app-version">v1.5.1</p>
+            <p class="splash-version" id="app-version">v1.6.0</p>
         </div>
         <div class="splash-bar"></div>
     </div>
@@ -217,10 +217,10 @@
                     <div id="rest-log-panel" class="rest-log-panel hidden">
                         <p id="rest-log-hint" class="log-hint"></p>
                         <div class="log-fields">
-                            <label class="log-field"><span>Carga (kg)</span>
+                            <label class="log-field" id="rest-log-kg-field"><span>Carga (kg)</span>
                                 <input id="rest-log-kg" type="text" inputmode="decimal" autocomplete="off" placeholder="0">
                             </label>
-                            <label class="log-field"><span>Reps</span>
+                            <label class="log-field"><span id="rest-log-reps-label">Reps</span>
                                 <input id="rest-log-reps" type="text" inputmode="numeric" autocomplete="off" placeholder="0">
                             </label>
                         </div>
@@ -248,11 +248,11 @@
         </div>
     </div>
 
-    <!-- BOTTOM SHEET: CARGA E REPS -->
+    <!-- BOTTOM SHEET: REGISTRO DA SÉRIE -->
     <div id="log-sheet" class="modal-overlay sheet-overlay hidden">
         <div class="modal-content sheet-content">
             <div class="modal-header">
-                <h3 id="log-sheet-title">Carga e reps</h3>
+                <h3 id="log-sheet-title">Registrar série</h3>
                 <button id="btn-log-sheet-close" class="btn-icon" aria-label="Fechar"><i class="ph ph-x"></i></button>
             </div>
             <p id="log-sheet-hint" class="log-hint"></p>

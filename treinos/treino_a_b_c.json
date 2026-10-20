@@ -28,7 +28,7 @@
         { "nome": "Tríceps na polia com corda", "series_reps": "3 × 8–12", "descanso": "60–90s", "rir": "0-2" },
         { "nome": "Tríceps francês unilateral", "series_reps": "3 × 10–12", "descanso": "60–90s", "rir": "0-2" },
         { "nome": "Abdominal na polia", "series_reps": "3 × 10–15", "descanso": "60s", "rir": "0-2" },
-        { "nome": "Prancha", "series_reps": "2 × 30–60s", "descanso": "45–60s", "rir": "0-2" }
+        { "nome": "Prancha", "series_reps": "2 × 30–60s", "descanso": "45–60s", "rir": "0-2", "tipo": "tempo" }
       ]
     },
     {
@@ -51,7 +51,7 @@
         { "nome": "Panturrilha em pé", "series_reps": "4 × 8–12", "descanso": "60–90s", "rir": "0-2" },
         { "nome": "Panturrilha sentado", "series_reps": "4 × 12–20", "descanso": "60–90s", "rir": "0-2" },
         { "nome": "Extensão lombar", "series_reps": "3 × 10–15", "descanso": "60–90s", "rir": "0-2" },
-        { "nome": "Abdominal reverso", "series_reps": "3 × 10–15", "descanso": "60s", "rir": "0-2" }
+        { "nome": "Abdominal reverso", "series_reps": "3 × 10–15", "descanso": "60s", "rir": "0-2", "tipo": "calistenia" }
       ]
     },
     {
@@ -73,7 +73,7 @@
         { "nome": "Rosca direta com barra", "series_reps": "3 × 6–10", "descanso": "90s", "rir": "0-2" },
         { "nome": "Rosca Scott máquina", "series_reps": "3 × 8–12", "descanso": "90s", "rir": "0-2" },
         { "nome": "Rosca martelo", "series_reps": "3 × 10–12", "descanso": "60–90s", "rir": "0-2" },
-        { "nome": "Elevação de pernas", "series_reps": "3 × 8–15", "descanso": "60s", "rir": "0-2" },
+        { "nome": "Elevação de pernas", "series_reps": "3 × 8–15", "descanso": "60s", "rir": "0-2", "tipo": "calistenia" },
         { "nome": "Pallof press", "series_reps": "2 × 10–15/lado", "descanso": "45–60s", "rir": "0-2" },
         { "nome": "Panturrilha", "series_reps": "3 × 12–20", "descanso": "60s", "rir": "0-2" }
       ]

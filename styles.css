@@ -1438,6 +1438,7 @@ input[type="range"]#swipe-unlock::-moz-range-thumb {
 .log-hint { font-size: 13px; color: var(--text-secondary); text-align: center; margin-bottom: 10px; line-height: 1.4; }
 .log-hint.hidden { display: none; }
 .log-fields { display: flex; gap: 10px; }
+.log-field.hidden { display: none; }
 .log-field { flex: 1; display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 12px; color: var(--text-secondary); }
 .log-field input {
     width: 100%;

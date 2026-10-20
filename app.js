@@ -153,6 +153,44 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     const fmtNum = (n) => String(Math.round(n * 10) / 10).replace('.', ',');
 
+    // Exercise kinds. Stored sets are always [kg, value]: 'carga' = [kg, reps],
+    // 'calistenia' = [null, reps], 'tempo' = [null, seconds]. The kind comes only from the
+    // workout JSON ("tipo"); a missing/unknown value means 'carga', so old data is unchanged.
+    const exType = (ex) => (ex && (ex.tipo === 'calistenia' || ex.tipo === 'tempo')) ? ex.tipo : 'carga';
+    function exTypeByName(name) {
+        const key = normName(name);
+        for (const w of (workoutData && workoutData.treinos) || []) {
+            const found = (w.exercicios || []).find(e => normName(e.nome) === key);
+            if (found) return exType(found);
+        }
+        return 'carga';
+    }
+    function fmtTime(sec) {
+        const n = Math.round(sec);
+        if (n < 60) return `${n}s`;
+        return `${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}`;
+    }
+    // Time inputs use a right-to-left m:ss mask (digits "120" -> "1:20"); stored value is seconds.
+    function maskTime(raw) {
+        const d = String(raw || '').replace(/\D/g, '').slice(-4);
+        if (!d) return '';
+        const ss = d.slice(-2).padStart(2, '0');
+        const mm = String(parseInt(d.slice(0, -2) || '0', 10));
+        return `${mm}:${ss}`;
+    }
+    function parseMaskedTime(raw) {
+        const d = String(raw || '').replace(/\D/g, '').slice(-4);
+        if (!d) return null;
+        return parseInt(d.slice(0, -2) || '0', 10) * 60 + parseInt(d.slice(-2), 10);
+    }
+    const timeInputValue = (sec) => (sec === null || sec === undefined) ? '' : maskTime(String(Math.floor(sec / 60)) + String(Math.round(sec % 60)).padStart(2, '0'));
+    // Reads a log input: masked time -> seconds, otherwise a plain number.
+    const readLogInput = (input) => input.dataset.timeMask ? parseMaskedTime(input.value) : parseNum(input.value);
+    document.addEventListener('input', (e) => {
+        const t = e.target;
+        if (t && t.dataset && t.dataset.timeMask) t.value = maskTime(t.value);
+    });
+
     let toastTimer = null;
     function showToast(msg) {
         let el = document.getElementById('app-toast');
@@ -577,12 +615,17 @@ document.addEventListener('DOMContentLoaded', () => {
                     '🔥 Complete todos para provar que você é maior que as suas limitações.',
                     '⚠️ Ajuste séries/reps conforme o grupo muscular de cada exercício.'
                 ],
-                exercicios: ranking.map(ex => ({
-                    nome: ex.name,
-                    series_reps: '3 × 8–12',
-                    descanso: '60–90s',
-                    rir: '0-2'
-                }))
+                exercicios: ranking.map(ex => {
+                    const tipo = exTypeByName(ex.name);
+                    const out = {
+                        nome: ex.name,
+                        series_reps: tipo === 'tempo' ? '3 × 30–60s' : '3 × 8–12',
+                        descanso: '60–90s',
+                        rir: '0-2'
+                    };
+                    if (tipo !== 'carga') out.tipo = tipo;
+                    return out;
+                })
             });
         });
 
@@ -707,8 +750,15 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Double progression: every set hit the top of the rep range -> raise load.
-    function suggestNext(perf, range) {
+    function suggestNext(perf, range, type = 'carga') {
         if (!perf) return null;
+        if (type !== 'carga') {
+            if (!range) return null;
+            const vals = perf.sets.map(s => parseNum(s[1]) || 0).filter(v => v > 0);
+            if (!vals.length || vals.every(v => v >= range.max)) return null;
+            const step = type === 'tempo' ? 5 : 1;
+            return { type: 'keep', kg: null, reps: Math.min(range.max, Math.min(...vals) + step) };
+        }
         const kgs = perf.sets.map(s => parseNum(s[0]) || 0);
         const reps = perf.sets.map(s => parseNum(s[1]) || 0);
         const topKg = Math.max(...kgs);
@@ -722,9 +772,11 @@ document.addEventListener('DOMContentLoaded', () => {
         return { type: 'keep', kg: topKg > 0 ? topKg : null, reps: target };
     }
 
-    function perfSummary(sets) {
+    function perfSummary(sets, type = 'carga') {
         const valid = sets.filter(Boolean);
         if (!valid.length) return '';
+        if (type === 'tempo') return valid.map(s => fmtTime(parseNum(s[1]) || 0)).join(', ');
+        if (type === 'calistenia') return `${valid.map(s => parseNum(s[1]) ?? '?').join(', ')} reps`;
         const kgs = valid.map(s => parseNum(s[0]) || 0);
         const reps = valid.map(s => (parseNum(s[1]) ?? '?'));
         if (new Set(kgs).size === 1) {
@@ -733,22 +785,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return valid.map((s, i) => `${fmtNum(kgs[i])}×${reps[i]}`).join(' · ');
     }
 
-    function suggestionText(sug) {
+    function suggestionText(sug, type = 'carga') {
         if (!sug) return '';
+        if (type === 'tempo') return sug.reps ? `buscar ${fmtTime(sug.reps)}` : '';
+        if (type === 'calistenia') return sug.reps ? `buscar ${sug.reps} reps` : '';
         if (sug.type === 'up') return `↑ ${fmtNum(sug.kg)} kg`;
         return sug.reps ? `Manter${sug.kg ? ' ' + fmtNum(sug.kg) + ' kg' : ''} · buscar ${sug.reps} reps` : '';
     }
 
     // Defaults offered for a set's inputs (never overrides what the user typed).
     function defaultsFor(st, setIdx) {
+        const type = exType(st.ex);
         const perf = getLastPerformance(st.ex.nome);
-        const sug = suggestNext(perf, st.range);
+        const sug = suggestNext(perf, st.range, type);
         const own = st.log[setIdx];
         const prev = st.log[setIdx - 1];
         const lastSet = perf ? (perf.sets[setIdx] || perf.sets[perf.sets.length - 1]) : null;
         let kg = null, reps = null;
         if (own) { kg = own[0]; reps = own[1]; }
-        else {
+        else if (type !== 'carga') {
+            if (lastSet) reps = parseNum(lastSet[1]);
+            else if (prev) reps = prev[1];
+        } else {
             if (prev && prev[0] !== null) kg = prev[0];
             else if (sug && sug.type === 'up') kg = sug.kg;
             else if (lastSet) kg = parseNum(lastSet[0]);
@@ -780,13 +838,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const today = st.log.slice(0, st.sets);
         let html = '';
         if (today.some(Boolean)) {
-            html = `<span class="log-today"><i class="ph ph-check-circle"></i> ${esc(perfSummary(today))}</span>`;
+            html = `<span class="log-today"><i class="ph ph-check-circle"></i> ${esc(perfSummary(today, exType(st.ex)))}</span>`;
         } else {
             const perf = getLastPerformance(st.ex.nome);
             if (perf) {
-                html = `<span class="log-last">Última: ${esc(perfSummary(perf.sets))}</span>`;
-                const sug = suggestNext(perf, st.range);
-                if (sug && sug.type === 'up') html += ` <span class="sug-chip">${esc(suggestionText(sug))}</span>`;
+                html = `<span class="log-last">Última: ${esc(perfSummary(perf.sets, exType(st.ex)))}</span>`;
+                const sug = suggestNext(perf, st.range, exType(st.ex));
+                if (sug && sug.type === 'up') html += ` <span class="sug-chip">${esc(suggestionText(sug, exType(st.ex)))}</span>`;
             }
         }
         el.innerHTML = html;
@@ -799,6 +857,28 @@ document.addEventListener('DOMContentLoaded', () => {
         st.log.length = Math.min(st.log.length, st.sets);
         item.querySelector('.current-set').textContent = st.sets;
         item.classList.toggle('done', st.sets >= st.max);
+    }
+
+    // Last set opens no rest modal, so nothing would ask for a log: repeat the latest one
+    // (this session first, then the last time the exercise was done).
+    function autoLogLastSet(item) {
+        const st = item._st;
+        const idx = st.sets - 1;
+        if (idx < 0 || st.log[idx]) return;
+        let src = null;
+        for (let i = idx - 1; i >= 0 && !src; i--) if (st.log[i]) src = st.log[i];
+        if (!src) {
+            const perf = getLastPerformance(st.ex.nome);
+            if (perf) src = perf.sets[idx] || perf.sets[perf.sets.length - 1];
+        }
+        if (!src) return;
+        const type = exType(st.ex);
+        const kg = type === 'carga' ? parseNum(src[0]) : null;
+        const val = parseNum(src[1]);
+        if (kg === null && val === null) return;
+        st.log[idx] = [kg, val];
+        refreshLogLine(item);
+        saveSession();
     }
 
     function updateItemStatus(item) {
@@ -819,16 +899,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const st = item._st;
         logSheetItem = item;
         logSheetTitle.textContent = st.ex.nome;
+        const type = exType(st.ex);
         const perf = getLastPerformance(st.ex.nome);
-        const sug = suggestNext(perf, st.range);
+        const sug = suggestNext(perf, st.range, type);
         const parts = [];
-        if (perf) parts.push(`Última vez: ${perfSummary(perf.sets)}`);
-        if (sug) parts.push(`Sugestão: ${suggestionText(sug)}`);
+        if (perf) parts.push(`Última vez: ${perfSummary(perf.sets, type)}`);
+        if (sug && suggestionText(sug, type)) parts.push(`Sugestão: ${suggestionText(sug, type)}`);
         logSheetHint.textContent = parts.join(' · ');
         logSheetHint.classList.toggle('hidden', !parts.length);
         logSheetRows.innerHTML = '';
         if (st.sets === 0) {
-            logSheetRows.innerHTML = '<p class="log-empty">Marque uma série concluída (+) para registrar carga e reps.</p>';
+            logSheetRows.innerHTML = '<p class="log-empty">Marque uma série concluída (+) para registrar a série.</p>';
         }
         for (let i = 0; i < st.sets; i++) {
             const d = defaultsFor(st, i);
@@ -836,11 +917,11 @@ document.addEventListener('DOMContentLoaded', () => {
             row.className = 'log-row';
             row.innerHTML = `
                 <span class="log-row-label">Série ${i + 1}</span>
-                <label class="log-field"><span>Carga (kg)</span>
+                ${type === 'carga' ? `<label class="log-field"><span>Carga (kg)</span>
                     <input type="text" inputmode="decimal" autocomplete="off" class="log-kg" placeholder="0" value="${d.kg !== null && d.kg !== undefined ? fmtNum(d.kg) : ''}">
-                </label>
-                <label class="log-field"><span>Reps</span>
-                    <input type="text" inputmode="numeric" autocomplete="off" class="log-reps" placeholder="0" value="${d.reps !== null && d.reps !== undefined ? fmtNum(d.reps) : ''}">
+                </label>` : ''}
+                <label class="log-field"><span>${type === 'tempo' ? 'Tempo (min:seg)' : 'Reps'}</span>
+                    <input type="text" inputmode="numeric" autocomplete="off" class="log-reps" ${type === 'tempo' ? 'data-time-mask="1" placeholder="0:00"' : 'placeholder="0"'} value="${type === 'tempo' ? timeInputValue(d.reps) : (d.reps !== null && d.reps !== undefined ? fmtNum(d.reps) : '')}">
                 </label>`;
             logSheetRows.appendChild(row);
         }
@@ -860,8 +941,9 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!item) return;
         const st = item._st;
         logSheetRows.querySelectorAll('.log-row').forEach((row, i) => {
-            const kg = parseNum(row.querySelector('.log-kg').value);
-            const reps = parseNum(row.querySelector('.log-reps').value);
+            const kgInput = row.querySelector('.log-kg');
+            const kg = kgInput ? parseNum(kgInput.value) : null;
+            const reps = readLogInput(row.querySelector('.log-reps'));
             st.log[i] = (kg === null && reps === null) ? null : [kg, reps];
         });
         refreshLogLine(item);
@@ -957,6 +1039,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     updateItemStatus(item);
                     if (st.sets < st.max) {
                         openRestModal(st.minRest, st.maxRest, ex.nome, `${st.sets}/${st.max}`, item);
+                    } else {
+                        autoLogLastSet(item);
                     }
                 }
             });
@@ -1363,6 +1447,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const restLogHint = document.getElementById('rest-log-hint');
     const restLogKg = document.getElementById('rest-log-kg');
     const restLogReps = document.getElementById('rest-log-reps');
+    const restLogKgField = document.getElementById('rest-log-kg-field');
+    const restLogRepsLabel = document.getElementById('rest-log-reps-label');
 
     function setRestLogOpen(open) {
         restLogPanel.classList.toggle('hidden', !open);
@@ -1378,12 +1464,17 @@ document.addEventListener('DOMContentLoaded', () => {
         restLogToggleText.textContent = 'Registrar série';
         if (!item) return;
         restLogSetIdx = item._st.sets - 1;
+        const type = exType(item._st.ex);
+        restLogKgField.classList.toggle('hidden', type !== 'carga');
+        restLogRepsLabel.textContent = type === 'tempo' ? 'Tempo (min:seg)' : 'Reps';
+        if (type === 'tempo') { restLogReps.dataset.timeMask = '1'; restLogReps.placeholder = '0:00'; }
+        else { delete restLogReps.dataset.timeMask; restLogReps.placeholder = '0'; }
         const d = defaultsFor(item._st, restLogSetIdx);
         restLogKg.value = d.kg !== null && d.kg !== undefined ? fmtNum(d.kg) : '';
-        restLogReps.value = d.reps !== null && d.reps !== undefined ? fmtNum(d.reps) : '';
+        restLogReps.value = type === 'tempo' ? timeInputValue(d.reps) : (d.reps !== null && d.reps !== undefined ? fmtNum(d.reps) : '');
         const parts = [];
-        if (d.perf) parts.push(`Última: ${perfSummary(d.perf.sets)}`);
-        if (d.sug) parts.push(`Sugestão: ${suggestionText(d.sug)}`);
+        if (d.perf) parts.push(`Última: ${perfSummary(d.perf.sets, type)}`);
+        if (d.sug && suggestionText(d.sug, type)) parts.push(`Sugestão: ${suggestionText(d.sug, type)}`);
         restLogHint.textContent = parts.join(' · ');
         restLogHint.classList.toggle('hidden', !parts.length);
         if (item._st.log[restLogSetIdx]) restLogToggleText.textContent = 'Série registrada ✓';
@@ -1393,8 +1484,8 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('btn-rest-log-save').addEventListener('click', () => {
         const item = restLogItem;
         if (!item) return;
-        const kg = parseNum(restLogKg.value);
-        const reps = parseNum(restLogReps.value);
+        const kg = exType(item._st.ex) === 'carga' ? parseNum(restLogKg.value) : null;
+        const reps = readLogInput(restLogReps);
         if (kg !== null || reps !== null) {
             item._st.log[restLogSetIdx] = [kg, reps];
             refreshLogLine(item);
@@ -1523,9 +1614,11 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // Best set of an exercise session: highest load and the best reps at that load.
-    function bestOfSets(sets) {
+    function bestOfSets(sets, type = 'carga') {
         const valid = (sets || []).filter(s => Array.isArray(s) && (parseNum(s[0]) !== null || parseNum(s[1]) !== null));
         if (!valid.length) return null;
+        // Bodyweight/timed: only the value slot (reps or seconds) matters, never the load.
+        if (type !== 'carga') return { kg: 0, reps: Math.max(...valid.map(s => parseNum(s[1]) || 0)) };
         const kg = Math.max(...valid.map(s => parseNum(s[0]) || 0));
         const reps = Math.max(...valid.filter(s => (parseNum(s[0]) || 0) === kg).map(s => parseNum(s[1]) || 0));
         return { kg, reps };
@@ -1615,11 +1708,14 @@ document.addEventListener('DOMContentLoaded', () => {
         const gains = [];
         (Array.isArray(entry.ex) ? entry.ex : []).forEach(x => {
             if (!x || !Array.isArray(x.s)) return;
-            const now = bestOfSets(x.s);
+            const type = exTypeByName(x.n);
+            const now = bestOfSets(x.s, type);
             const before = findLastPerf(prev, x.n);
-            const old = before && bestOfSets(before.sets);
+            const old = before && bestOfSets(before.sets, type);
             if (!now || !old) return;
-            if (now.kg > old.kg + 0.001) gains.push(`${x.n}: ${fmtNum(old.kg)} → ${fmtNum(now.kg)} kg`);
+            if (type === 'tempo') {
+                if (now.reps > old.reps) gains.push(`${x.n}: ${fmtTime(old.reps)} → ${fmtTime(now.reps)}`);
+            } else if (now.kg > old.kg + 0.001) gains.push(`${x.n}: ${fmtNum(old.kg)} → ${fmtNum(now.kg)} kg`);
             else if (Math.abs(now.kg - old.kg) < 0.001 && now.reps > old.reps) {
                 gains.push(now.kg > 0 ? `${x.n}: ${fmtNum(now.kg)} kg · ${fmtNum(old.reps)} → ${fmtNum(now.reps)} reps` : `${x.n}: ${fmtNum(old.reps)} → ${fmtNum(now.reps)} reps`);
             }
@@ -2212,9 +2308,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const older = allDesc.filter(e => Number(e.finishedAt) < Number(entry.finishedAt));
         return entry.ex.some(x => {
             if (!x || !Array.isArray(x.s)) return false;
-            const now = bestOfSets(x.s);
+            const type = exTypeByName(x.n);
+            const now = bestOfSets(x.s, type);
             const before = findLastPerf(older, x.n);
-            const old = before && bestOfSets(before.sets);
+            const old = before && bestOfSets(before.sets, type);
             if (!now || !old) return false;
             return now.kg > old.kg + 0.001 || (Math.abs(now.kg - old.kg) < 0.001 && now.reps > old.reps);
         });
@@ -2241,7 +2338,7 @@ document.addEventListener('DOMContentLoaded', () => {
           unit: 'treinos', eval: (c) => cap(new Set(c.entries.filter(e => entryTotal(e) > 0 && e.doneExercises === entryTotal(e)).map(e => e.workoutName)).size, 3) },
         { id: 'evolucao-semana', scope: 'week', art: 'medalArrow', metal: 'esmeralda', title: 'Evolução da semana',
           desc: 'Mais carga ou mais repetições que da última vez.',
-          how: 'Registre carga e reps nos treinos e supere o seu último registro em algum exercício.',
+          how: 'Registre suas séries nos treinos e supere o seu último registro em algum exercício.',
           quote: 'Pequenos avanços, toda semana.',
           unit: '', eval: (c) => cap(c.entries.some(e => entryHasProgress(e, c.allDesc)) ? 1 : 0, 1) },
 
@@ -2701,6 +2798,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const key = normName(x.n);
                 if (!map.has(key)) map.set(key, { name: x.n, sessions: [] });
                 map.get(key).sessions.push({ t: entry.finishedAt, kg: maxKg, reps: maxReps });
+                map.get(key).type = exTypeByName(x.n);
             });
         });
         return [...map.values()].sort((a, b) => b.sessions.length - a.sessions.length);
@@ -2709,17 +2807,19 @@ document.addEventListener('DOMContentLoaded', () => {
     function renderExerciseChart(exercises, idx, host) {
         const ex = exercises[idx];
         if (!ex) { host.innerHTML = ''; return; }
-        const useKg = ex.sessions.some(s => s.kg > 0);
+        const timed = ex.type === 'tempo';
+        const useKg = ex.type === 'carga' && ex.sessions.some(s => s.kg > 0);
         const key = useKg ? 'kg' : 'reps';
-        const unit = useKg ? 'kg' : 'reps';
+        const unit = useKg ? 'kg' : (timed ? 's' : 'reps');
+        const fmtVal = (v) => timed ? fmtTime(v) : `${fmtNum(v)} ${unit}`;
         const pts = ex.sessions.slice(-12).map(s => ({ value: s[key], label: shortDate(s.t) }));
         const best = ex.sessions.reduce((a, s) => (s[key] >= a[key] ? s : a), ex.sessions[0]);
         const first = ex.sessions[0][key], now = ex.sessions[ex.sessions.length - 1][key];
         const diff = now - first;
         host.innerHTML = `
             <div class="pr-row">
-                <span class="pr-badge">🏆 Recorde: ${fmtNum(best[key])} ${unit} <small>${shortDate(best.t)}</small></span>
-                <span class="pr-diff ${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '+' : ''}${fmtNum(diff)} ${unit} desde o início</span>
+                <span class="pr-badge">🏆 Recorde: ${fmtVal(best[key])} <small>${shortDate(best.t)}</small></span>
+                <span class="pr-diff ${diff >= 0 ? 'up' : 'down'}">${diff >= 0 ? '+' : '-'}${timed ? fmtTime(Math.abs(diff)) : fmtNum(Math.abs(diff)) + ' ' + unit} desde o início</span>
             </div>
             ${lineChartSvg(pts, unit)}`;
     }
@@ -2779,7 +2879,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const volumes = [...valid].reverse().map(e => {
             if (!Array.isArray(e.ex)) return null;
             let vol = 0;
-            e.ex.forEach(x => (x.s || []).forEach(s => { if (s) vol += (parseNum(s[0]) || 0) * (parseNum(s[1]) || 0); }));
+            e.ex.forEach(x => exTypeByName(x.n) === 'carga' && (x.s || []).forEach(s => { if (s) vol += (parseNum(s[0]) || 0) * (parseNum(s[1]) || 0); }));
             return vol > 0 ? { value: Math.round(vol), label: shortDate(e.finishedAt) } : null;
         }).filter(Boolean).slice(-10);
 
@@ -2827,7 +2927,7 @@ document.addEventListener('DOMContentLoaded', () => {
             </div>` : `
             <div class="stats-card stats-hint">
                 <h4><i class="ph ph-medal"></i> Evolução por exercício</h4>
-                <p>Registre carga e reps durante o treino (tela de descanso ou ícone de lápis no exercício) para ver sua evolução e recordes aqui.</p>
+                <p>Registre suas séries durante o treino (tela de descanso ou ícone de lápis no exercício) para ver sua evolução e recordes aqui.</p>
             </div>`}
 
             ${skipped.length ? `
