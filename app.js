@@ -2953,9 +2953,61 @@ document.addEventListener('DOMContentLoaded', () => {
         return el;
     }
 
+    // ---------- Export to Worcade ----------
+    // Opens worcade.app/import; once it says it is ready, the history is sent by postMessage
+    // (fixed target origin). If the popup is blocked or Worcade never answers, a JSON file is
+    // downloaded instead (Worcade's /import accepts it too).
+    const WORCADE_ORIGIN = 'https://worcade.app';
+    const exportBtn = document.getElementById('export-history-btn');
+    const exportMsg = document.getElementById('export-history-msg');
+
+    function buildExportPayload() {
+        return { source: 'academia-pro', v: 1, exportedAt: Date.now(), history: getWorkoutHistory() };
+    }
+
+    function downloadExportFile() {
+        const blob = new Blob([JSON.stringify(buildExportPayload())], { type: 'application/json' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'academia-pro-historico.json';
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    }
+
+    function exportHistoryToWorcade() {
+        const say = (t) => { if (exportMsg) exportMsg.textContent = t; };
+        const fallback = (why) => {
+            downloadExportFile();
+            say(`${why} Baixamos o arquivo academia-pro-historico.json: no Worcade, abra ${WORCADE_ORIGIN}/import e selecione-o.`);
+        };
+        const win = window.open(`${WORCADE_ORIGIN}/import`, 'worcade-import');
+        if (!win) return fallback('Não foi possível abrir o Worcade.');
+        say('Aguardando o Worcade…');
+        let done = false;
+        const onMessage = (ev) => {
+            if (ev.origin !== WORCADE_ORIGIN || ev.source !== win) return;
+            if (!ev.data || ev.data.type !== 'worcade-import-ready') return;
+            done = true;
+            window.removeEventListener('message', onMessage);
+            win.postMessage(buildExportPayload(), WORCADE_ORIGIN);
+            say('Histórico enviado ao Worcade. Continue por lá.');
+        };
+        window.addEventListener('message', onMessage);
+        setTimeout(() => {
+            if (done) return;
+            window.removeEventListener('message', onMessage);
+            fallback('O Worcade não respondeu.');
+        }, 20000);
+    }
+    if (exportBtn) exportBtn.addEventListener('click', exportHistoryToWorcade);
+
     function renderHistoryView() {
         if (!historyListEl) return;
         const history = getWorkoutHistory();
+        const exportBox = document.getElementById('export-history');
+        if (exportBox) exportBox.classList.toggle('hidden', history.length === 0);
         historyListEl.innerHTML = '';
         if (statsEl) statsEl.innerHTML = '';
         if (history.length === 0) {

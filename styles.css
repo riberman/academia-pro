@@ -1864,3 +1864,9 @@ input[type="range"]#swipe-unlock::-moz-range-thumb {
 
 .trophy-card.ghost { pointer-events: none; cursor: default; }
 .trophy-card.ghost > * > * , .trophy-card.ghost .trophy-name { visibility: hidden; }
+
+.export-history { margin: 16px 0 24px; display: flex; flex-direction: column; gap: 8px; }
+.export-history.hidden { display: none; }
+.export-history .btn-secondary { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; }
+.export-history-msg { font-size: 13px; opacity: 0.8; margin: 0; }
+.export-history-msg:empty { display: none; }
